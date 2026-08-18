@@ -119,6 +119,15 @@ Default view stays on Level/YoY so the dashboard isn't overloaded on first
 load; RoC is opt-in per chart. Section 8 is the only place RoC is shown by
 default, since that's its dedicated home.
 
+## AI-generated chart commentary (deferred)
+
+Idea explored: auto-generate a short takeaway per chart via the Claude API,
+grounded in computed stats (latest value, MoM/YoY change, RoC phase) rather
+than raw series data, with commentary cached alongside each data refresh
+rather than generated live per page view. **On hold for now** — the app is
+being built out without this first; revisit once the core dashboard is
+working end-to-end.
+
 ## Open items for the build phase
 
 - Confirm exact FRED series IDs flagged "verify" above (GDP contribution
