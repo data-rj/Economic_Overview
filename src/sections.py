@@ -5,7 +5,7 @@ import streamlit as st
 
 from . import charts
 from .config import ChartSpec, Section
-from .fred import fetch_series
+from .fred import fetch_series, fetch_series_error
 
 
 def render_chart(spec: ChartSpec) -> None:
@@ -19,7 +19,10 @@ def render_chart(spec: ChartSpec) -> None:
 
     series_map = {label: fetch_series(series_id) for label, series_id in spec.series.items()}
     if all(s.empty for s in series_map.values()):
-        st.warning("No data returned. Set a FRED_API_KEY (see README) to load this chart.")
+        details = "; ".join(
+            f"{series_id} — {fetch_series_error(series_id)}" for series_id in spec.series.values()
+        )
+        st.warning(f"No data returned. {details}")
         st.divider()
         return
 

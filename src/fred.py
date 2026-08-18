@@ -21,11 +21,12 @@ def get_api_key() -> str | None:
 
 
 @st.cache_data(ttl=60 * 60 * 12, show_spinner=False)
-def fetch_series(series_id: str, start: str = "1990-01-01") -> pd.Series:
-    """Fetch one FRED series as a date-indexed float Series. Empty Series on failure."""
+def _fetch_series_raw(series_id: str, start: str = "1990-01-01") -> tuple[pd.Series, str]:
+    """Fetch one FRED series. Returns (series, error_message) — error_message is '' on success."""
+    empty = pd.Series(dtype=float, name=series_id)
     api_key = get_api_key()
     if not api_key:
-        return pd.Series(dtype=float, name=series_id)
+        return empty, "No FRED_API_KEY configured."
 
     params = {
         "series_id": series_id,
@@ -36,17 +37,43 @@ def fetch_series(series_id: str, start: str = "1990-01-01") -> pd.Series:
     try:
         resp = requests.get(FRED_BASE_URL, params=params, timeout=15)
         resp.raise_for_status()
-        obs = resp.json().get("observations", [])
-    except (requests.RequestException, ValueError):
-        return pd.Series(dtype=float, name=series_id)
+    except requests.HTTPError as e:
+        detail = ""
+        if e.response is not None:
+            try:
+                detail = e.response.json().get("error_message", "")
+            except ValueError:
+                detail = e.response.text[:200]
+        status = e.response.status_code if e.response is not None else "?"
+        return empty, f"HTTP {status}: {detail or e}"
+    except requests.RequestException as e:
+        return empty, f"Request failed: {e}"
 
+    try:
+        payload = resp.json()
+    except ValueError as e:
+        return empty, f"Could not parse FRED response: {e}"
+
+    obs = payload.get("observations", [])
     if not obs:
-        return pd.Series(dtype=float, name=series_id)
+        return empty, "FRED returned zero observations for this series/date range."
 
     df = pd.DataFrame(obs)
     df["date"] = pd.to_datetime(df["date"])
     df["value"] = pd.to_numeric(df["value"], errors="coerce")
-    return df.set_index("date")["value"].rename(series_id).dropna()
+    series = df.set_index("date")["value"].rename(series_id).dropna()
+    if series.empty:
+        return empty, "All observations were missing/non-numeric (FRED uses '.' for missing values)."
+    return series, ""
+
+
+def fetch_series(series_id: str, start: str = "1990-01-01") -> pd.Series:
+    return _fetch_series_raw(series_id, start)[0]
+
+
+def fetch_series_error(series_id: str, start: str = "1990-01-01") -> str:
+    """Reason the last fetch of this series returned no data. Empty string on success."""
+    return _fetch_series_raw(series_id, start)[1]
 
 
 @st.cache_data(ttl=60 * 60 * 12, show_spinner=False)
