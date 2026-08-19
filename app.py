@@ -18,6 +18,12 @@ if not get_api_key():
 nav_titles = [section.title for section in SECTIONS] + ["Business Cycle / Rate of Change"]
 choice = st.sidebar.radio("Section", nav_titles)
 
+st.sidebar.divider()
+if st.sidebar.button("Refresh data"):
+    st.cache_data.clear()
+    st.rerun()
+st.sidebar.caption("Clears cached FRED data (normally refreshed automatically every 30 min).")
+
 if choice == "Business Cycle / Rate of Change":
     render_business_cycle(SECTIONS)
 else:

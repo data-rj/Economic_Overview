@@ -20,9 +20,15 @@ def get_api_key() -> str | None:
     return os.environ.get("FRED_API_KEY")
 
 
-@st.cache_data(ttl=60 * 60 * 12, show_spinner=False)
+@st.cache_data(ttl=60 * 30, show_spinner=False)
 def _fetch_series_raw(series_id: str, start: str = "1990-01-01") -> tuple[pd.Series, str]:
-    """Fetch one FRED series. Returns (series, error_message) — error_message is '' on success."""
+    """Fetch one FRED series. Returns (series, error_message) — error_message is '' on success.
+
+    TTL is short (30 min, not e.g. 12h) so a transient failure — like a config
+    issue at boot before secrets finish propagating — self-heals quickly
+    instead of serving a stale error for hours. FRED series update at most
+    daily, so this doesn't meaningfully increase API load.
+    """
     empty = pd.Series(dtype=float, name=series_id)
     api_key = get_api_key()
     if not api_key:
