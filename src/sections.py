@@ -26,29 +26,17 @@ def render_chart(spec: ChartSpec) -> None:
         st.divider()
         return
 
-    control_cols = st.columns([3, 1])
     view = charts.VIEW_LEVEL
-    with control_cols[0]:
-        if spec.roc_eligible:
-            view = st.radio(
-                "View",
-                charts.VIEWS,
-                horizontal=True,
-                key=f"view_{spec.id}",
-                label_visibility="collapsed",
-            )
-    with control_cols[1]:
-        timeframe = st.selectbox(
-            "Timeframe",
-            charts.TIMEFRAME_OPTIONS,
-            index=len(charts.TIMEFRAME_OPTIONS) - 1,
-            key=f"timeframe_{spec.id}",
+    if spec.roc_eligible:
+        view = st.radio(
+            "View",
+            charts.VIEWS,
+            horizontal=True,
+            key=f"view_{spec.id}",
             label_visibility="collapsed",
         )
 
-    fig = charts.build_chart(
-        series_map, view, unit=spec.unit, index_to_100=spec.index_to_100, timeframe=timeframe,
-    )
+    fig = charts.build_chart(series_map, view, unit=spec.unit, index_to_100=spec.index_to_100)
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
     st.caption(f"Source: FRED — {', '.join(spec.series.values())}")
     st.divider()
