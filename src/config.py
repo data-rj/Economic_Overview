@@ -22,6 +22,8 @@ class ChartSpec:
     index_to_100: bool = False
     placeholder: bool = False
     placeholder_note: str = ""
+    kind: str = "line"  # "line" or "gdp_contribution"
+    gdp_series_id: str = ""  # denominator series for kind="gdp_contribution"
 
 
 @dataclass
@@ -55,13 +57,23 @@ SECTIONS: list[Section] = [
             ),
             ChartSpec(
                 id="gdp_contributions",
-                title="Contributions to GDP Growth by Component",
-                why="Shows what is driving growth — PCE, Investment, Net Exports, Government.",
-                placeholder=True,
-                placeholder_note=(
-                    "NIPA \"contribution to % change\" series (BEA Table 1.1.2, mirrored on FRED) — "
-                    "confirm exact FRED series IDs before wiring up."
+                title="Contributions to GDP Growth by Component (Approximate)",
+                why=(
+                    "Shows what is driving growth — PCE, Investment, Net Exports, Government. "
+                    "Computed here as each component's quarterly change relative to prior-quarter "
+                    "real GDP, annualized — a first-order approximation of BEA's official "
+                    "chain-weighted contribution figures (BEA Table 1.1.2), not an exact match."
                 ),
+                kind="gdp_contribution",
+                series={
+                    "PCE": "PCEC96",
+                    "Investment": "GPDIC1",
+                    "Government": "GCEC1",
+                    "Exports": "EXPGSC1",
+                    "Imports": "IMPGSC1",
+                },
+                gdp_series_id="GDPC1",
+                unit="Percentage points (annualized)",
             ),
             ChartSpec(
                 id="gdp_deflator",

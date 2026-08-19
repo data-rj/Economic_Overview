@@ -171,3 +171,44 @@ def build_chart(
         fig.add_hline(y=0, line_color=AXIS, line_width=1)
 
     return _apply_layout(fig, y_title)
+
+
+def build_contribution_chart(component_series: dict[str, pd.Series], gdp_level: pd.Series) -> go.Figure:
+    """Stacked-bar approximation of each component's contribution to real GDP growth.
+
+    contribution_i(t) ≈ (component_i(t) - component_i(t-1)) / GDP(t-1) * 400 — a
+    first-order approximation of BEA's official chain-weighted methodology, computed
+    from already-fetched level series rather than a separate pre-built NIPA series.
+    """
+    fig = go.Figure()
+    if gdp_level.empty:
+        return fig
+    gdp_prior = gdp_level.shift(1)
+
+    contributions: dict[str, pd.Series] = {}
+    for label, s in component_series.items():
+        if s.empty:
+            continue
+        s_aligned, gdp_aligned = s.align(gdp_prior, join="inner")
+        contributions[label] = ((s_aligned - s_aligned.shift(1)) / gdp_aligned * 400).dropna()
+
+    non_empty = {label: c for label, c in contributions.items() if not c.empty}
+    if not non_empty:
+        return fig
+
+    total = None
+    for i, (label, c) in enumerate(non_empty.items()):
+        color = CATEGORICAL[i % len(CATEGORICAL)]
+        fig.add_trace(go.Bar(x=c.index, y=c.values, name=_legend_name(label, c, is_percent=True), marker_color=color))
+        total = c if total is None else total.add(c, fill_value=0)
+
+    if total is not None:
+        fig.add_trace(go.Scatter(
+            x=total.index, y=total.values, name=_legend_name("Total (approx.)", total, is_percent=True),
+            mode="lines", line=dict(color=INK_PRIMARY, width=2),
+        ))
+        _add_recession_bands(fig, total.index.min(), total.index.max())
+
+    fig.add_hline(y=0, line_color=AXIS, line_width=1)
+    fig.update_layout(barmode="relative")
+    return _apply_layout(fig, "Percentage points (annualized)")

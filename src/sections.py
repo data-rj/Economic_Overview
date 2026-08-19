@@ -17,6 +17,10 @@ def render_chart(spec: ChartSpec) -> None:
         st.divider()
         return
 
+    if spec.kind == "gdp_contribution":
+        render_gdp_contribution_chart(spec)
+        return
+
     series_map = {label: fetch_series(series_id) for label, series_id in spec.series.items()}
     if all(s.empty for s in series_map.values()):
         details = "; ".join(
@@ -39,6 +43,32 @@ def render_chart(spec: ChartSpec) -> None:
     fig = charts.build_chart(series_map, view, unit=spec.unit, index_to_100=spec.index_to_100)
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
     st.caption(f"Source: FRED — {', '.join(spec.series.values())}")
+    st.divider()
+
+
+def render_gdp_contribution_chart(spec: ChartSpec) -> None:
+    series_map = {label: fetch_series(series_id) for label, series_id in spec.series.items()}
+    gdp_level = fetch_series(spec.gdp_series_id)
+
+    if gdp_level.empty or all(s.empty for s in series_map.values()):
+        all_ids = list(spec.series.values()) + [spec.gdp_series_id]
+        details = "; ".join(f"{series_id} — {fetch_series_error(series_id)}" for series_id in all_ids)
+        st.warning(f"No data returned. {details}")
+        st.divider()
+        return
+
+    exports = series_map.pop("Exports", None)
+    imports = series_map.pop("Imports", None)
+    if exports is not None and imports is not None and not exports.empty and not imports.empty:
+        series_map["Net Exports"] = exports.subtract(imports, fill_value=0)
+
+    ordered_labels = ["PCE", "Investment", "Net Exports", "Government"]
+    series_map = {label: series_map[label] for label in ordered_labels if label in series_map}
+
+    fig = charts.build_contribution_chart(series_map, gdp_level)
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    all_ids = list(spec.series.values()) + [spec.gdp_series_id]
+    st.caption(f"Source: FRED — {', '.join(all_ids)}")
     st.divider()
 
 
