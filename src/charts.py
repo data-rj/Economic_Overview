@@ -1,13 +1,23 @@
-"""Plotly chart builders — palette, mark specs, recession shading, and timeframe controls.
+"""Plotly chart builders — palette, mark specs, recession shading, and timeframe filtering.
 
 Colors and chrome follow the dashboard-design reference palette: fixed
 categorical hue order (never cycled/reassigned by filter), hairline
 gridlines, muted axis ink, and a single shared y-axis per chart (no
 dual-axis charts — series on very different scales use `index_to_100`
-instead). Each chart ships Plotly's native range-selector buttons (1Y/5Y/
-10Y/20Y/Max) plus a range slider so the timeframe is adjustable per chart
-without extra Streamlit widgets. Legend entries carry the latest period and
-value for each series, e.g. "Real GDP · Jun-26: 23,512.4".
+instead).
+
+Timeframe is controlled by a Streamlit dropdown (`TIMEFRAME_OPTIONS`) rather
+than Plotly's native range slider/selector. Two reasons: the native slider's
+drag/pinch zoom proved too easy to trigger by accident and hard to reset,
+and — more fundamentally — Plotly's client-side zoom never reaches this
+Python code, so the y-axis stays fixed to the full-history min/max no
+matter what window you zoom into. Because the dropdown is a real Streamlit
+widget, selecting a timeframe reruns this code with the data already
+sliced, so the y-axis autoranges to fit whatever window is selected. Charts
+have no drag-zoom, pinch-zoom, or range slider — hover tooltips still work.
+Legend entries carry the latest period and value for each series, e.g.
+"Real GDP · Jun-26: 23,512.4" — always the true latest point, regardless of
+the selected timeframe.
 """
 from __future__ import annotations
 
@@ -33,13 +43,15 @@ MUTED = "#898781"
 INK_PRIMARY = "#0b0b0b"
 INK_SECONDARY = "#52514e"
 SURFACE = "#fcfcfb"
-SELECTOR_ACTIVE = "#cde2fb"
 RECESSION_BAND = "rgba(11, 11, 11, 0.06)"
 
 VIEW_LEVEL = "Level"
 VIEW_YOY = "YoY %"
 VIEW_ROC = "RoC (3/12 MMA)"
 VIEWS = [VIEW_LEVEL, VIEW_YOY, VIEW_ROC]
+
+TIMEFRAME_OPTIONS = ["1Y", "5Y", "10Y", "20Y", "Max"]
+_TIMEFRAME_YEARS = {"1Y": 1, "5Y": 5, "10Y": 10, "20Y": 20, "Max": None}
 
 
 def _format_last_point(series: pd.Series, is_percent: bool) -> str:
@@ -62,6 +74,15 @@ def _legend_name(label: str, series: pd.Series, is_percent: bool) -> str:
     return f"{label} · {suffix}" if suffix else label
 
 
+def _clip(series: pd.Series, start_date: pd.Timestamp | None) -> pd.Series:
+    return series[series.index >= start_date] if start_date is not None else series
+
+
+def _timeframe_start(overall_end: pd.Timestamp, timeframe: str) -> pd.Timestamp | None:
+    years = _TIMEFRAME_YEARS.get(timeframe)
+    return (overall_end - pd.DateOffset(years=years)) if years else None
+
+
 def _apply_layout(fig: go.Figure, y_title: str) -> go.Figure:
     fig.update_layout(
         template="plotly_white",
@@ -71,27 +92,9 @@ def _apply_layout(fig: go.Figure, y_title: str) -> go.Figure:
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color=INK_SECONDARY)),
         margin=dict(l=10, r=10, t=10, b=10),
         hovermode="x unified",
+        dragmode=False,
     )
-    fig.update_xaxes(
-        showgrid=False,
-        linecolor=AXIS,
-        tickfont=dict(color=MUTED),
-        rangeslider=dict(visible=True, thickness=0.08, bgcolor=SURFACE, bordercolor=GRIDLINE, borderwidth=1),
-        rangeselector=dict(
-            buttons=[
-                dict(count=1, label="1Y", step="year", stepmode="backward"),
-                dict(count=5, label="5Y", step="year", stepmode="backward"),
-                dict(count=10, label="10Y", step="year", stepmode="backward"),
-                dict(count=20, label="20Y", step="year", stepmode="backward"),
-                dict(step="all", label="Max"),
-            ],
-            bgcolor=SURFACE,
-            activecolor=SELECTOR_ACTIVE,
-            bordercolor=GRIDLINE,
-            borderwidth=1,
-            font=dict(color=INK_SECONDARY),
-        ),
-    )
+    fig.update_xaxes(showgrid=False, linecolor=AXIS, tickfont=dict(color=MUTED), fixedrange=True)
     fig.update_yaxes(
         showgrid=True,
         gridcolor=GRIDLINE,
@@ -99,6 +102,7 @@ def _apply_layout(fig: go.Figure, y_title: str) -> go.Figure:
         title=y_title,
         tickfont=dict(color=MUTED),
         title_font=dict(color=MUTED),
+        fixedrange=True,
     )
     return fig
 
@@ -115,12 +119,16 @@ def build_chart(
     view: str,
     unit: str = "",
     index_to_100: bool = False,
+    timeframe: str = "Max",
 ) -> go.Figure:
     """series_map: legend label -> level Series (already fetched from FRED)."""
     fig = go.Figure()
     non_empty = {label: s for label, s in series_map.items() if not s.empty}
     if not non_empty:
         return fig
+
+    overall_end = max(s.index.max() for s in non_empty.values())
+    start_date = _timeframe_start(overall_end, timeframe)
 
     is_pct_unit = "%" in unit
     y_title = unit
@@ -130,23 +138,22 @@ def build_chart(
         if view == VIEW_YOY:
             plotted = transforms.yoy_pct_change(s)
             y_title = "YoY % change"
-            fig.add_trace(go.Scatter(
-                x=plotted.index, y=plotted.values, name=_legend_name(label, plotted, is_percent=True),
-                line=dict(color=color, width=2),
-            ))
+            name = _legend_name(label, plotted, is_percent=True)
+            visible = _clip(plotted, start_date)
+            fig.add_trace(go.Scatter(x=visible.index, y=visible.values, name=name, line=dict(color=color, width=2)))
             continue
 
         if view == VIEW_ROC:
             short, long = transforms.roc_pair(s)
             y_title = "YoY % change of moving average"
+            short_name = _legend_name(f"{label} — 3MMA RoC", short, is_percent=True)
+            long_name = _legend_name(f"{label} — 12MMA RoC", long, is_percent=True)
+            short_visible, long_visible = _clip(short, start_date), _clip(long, start_date)
             fig.add_trace(go.Scatter(
-                x=short.index, y=short.values,
-                name=_legend_name(f"{label} — 3MMA RoC", short, is_percent=True),
-                line=dict(color=color, width=2),
+                x=short_visible.index, y=short_visible.values, name=short_name, line=dict(color=color, width=2),
             ))
             fig.add_trace(go.Scatter(
-                x=long.index, y=long.values,
-                name=_legend_name(f"{label} — 12MMA RoC", long, is_percent=True),
+                x=long_visible.index, y=long_visible.values, name=long_name,
                 line=dict(color=color, width=2, dash="dot"),
             ))
             continue
@@ -155,17 +162,12 @@ def build_chart(
         if index_to_100 and len(s) > 0:
             plotted = s / s.iloc[0] * 100
             y_title = "Index (start = 100)"
-        fig.add_trace(go.Scatter(
-            x=plotted.index, y=plotted.values,
-            name=_legend_name(label, plotted, is_percent=is_pct_unit and not index_to_100),
-            line=dict(color=color, width=2),
-        ))
+        name = _legend_name(label, plotted, is_percent=is_pct_unit and not index_to_100)
+        visible = _clip(plotted, start_date)
+        fig.add_trace(go.Scatter(x=visible.index, y=visible.values, name=name, line=dict(color=color, width=2)))
 
-    all_x = [s.index for s in non_empty.values() if not s.empty]
-    if all_x:
-        start = min(idx.min() for idx in all_x)
-        end = max(idx.max() for idx in all_x)
-        _add_recession_bands(fig, start, end)
+    display_start = start_date if start_date is not None else min(s.index.min() for s in non_empty.values())
+    _add_recession_bands(fig, display_start, overall_end)
 
     if view == VIEW_ROC:
         fig.add_hline(y=0, line_color=AXIS, line_width=1)
@@ -173,7 +175,11 @@ def build_chart(
     return _apply_layout(fig, y_title)
 
 
-def build_contribution_chart(component_series: dict[str, pd.Series], gdp_level: pd.Series) -> go.Figure:
+def build_contribution_chart(
+    component_series: dict[str, pd.Series],
+    gdp_level: pd.Series,
+    timeframe: str = "Max",
+) -> go.Figure:
     """Stacked-bar approximation of each component's contribution to real GDP growth.
 
     contribution_i(t) ≈ (component_i(t) - component_i(t-1)) / GDP(t-1) * 400 — a
@@ -196,18 +202,26 @@ def build_contribution_chart(component_series: dict[str, pd.Series], gdp_level: 
     if not non_empty:
         return fig
 
+    overall_end = max(c.index.max() for c in non_empty.values())
+    start_date = _timeframe_start(overall_end, timeframe)
+
     total = None
     for i, (label, c) in enumerate(non_empty.items()):
         color = CATEGORICAL[i % len(CATEGORICAL)]
-        fig.add_trace(go.Bar(x=c.index, y=c.values, name=_legend_name(label, c, is_percent=True), marker_color=color))
+        name = _legend_name(label, c, is_percent=True)
+        visible = _clip(c, start_date)
+        fig.add_trace(go.Bar(x=visible.index, y=visible.values, name=name, marker_color=color))
         total = c if total is None else total.add(c, fill_value=0)
 
     if total is not None:
+        total_name = _legend_name("Total (approx.)", total, is_percent=True)
+        visible_total = _clip(total, start_date)
         fig.add_trace(go.Scatter(
-            x=total.index, y=total.values, name=_legend_name("Total (approx.)", total, is_percent=True),
+            x=visible_total.index, y=visible_total.values, name=total_name,
             mode="lines", line=dict(color=INK_PRIMARY, width=2),
         ))
-        _add_recession_bands(fig, total.index.min(), total.index.max())
+        display_start = start_date if start_date is not None else total.index.min()
+        _add_recession_bands(fig, display_start, overall_end)
 
     fig.add_hline(y=0, line_color=AXIS, line_width=1)
     fig.update_layout(barmode="relative")

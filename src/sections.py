@@ -30,17 +30,29 @@ def render_chart(spec: ChartSpec) -> None:
         st.divider()
         return
 
+    control_cols = st.columns([3, 1])
     view = charts.VIEW_LEVEL
-    if spec.roc_eligible:
-        view = st.radio(
-            "View",
-            charts.VIEWS,
-            horizontal=True,
-            key=f"view_{spec.id}",
+    with control_cols[0]:
+        if spec.roc_eligible:
+            view = st.radio(
+                "View",
+                charts.VIEWS,
+                horizontal=True,
+                key=f"view_{spec.id}",
+                label_visibility="collapsed",
+            )
+    with control_cols[1]:
+        timeframe = st.selectbox(
+            "Timeframe",
+            charts.TIMEFRAME_OPTIONS,
+            index=len(charts.TIMEFRAME_OPTIONS) - 1,
+            key=f"timeframe_{spec.id}",
             label_visibility="collapsed",
         )
 
-    fig = charts.build_chart(series_map, view, unit=spec.unit, index_to_100=spec.index_to_100)
+    fig = charts.build_chart(
+        series_map, view, unit=spec.unit, index_to_100=spec.index_to_100, timeframe=timeframe,
+    )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
     st.caption(f"Source: FRED — {', '.join(spec.series.values())}")
     st.divider()
@@ -65,7 +77,17 @@ def render_gdp_contribution_chart(spec: ChartSpec) -> None:
     ordered_labels = ["PCE", "Investment", "Net Exports", "Government"]
     series_map = {label: series_map[label] for label in ordered_labels if label in series_map}
 
-    fig = charts.build_contribution_chart(series_map, gdp_level)
+    _, timeframe_col = st.columns([3, 1])
+    with timeframe_col:
+        timeframe = st.selectbox(
+            "Timeframe",
+            charts.TIMEFRAME_OPTIONS,
+            index=len(charts.TIMEFRAME_OPTIONS) - 1,
+            key=f"timeframe_{spec.id}",
+            label_visibility="collapsed",
+        )
+
+    fig = charts.build_contribution_chart(series_map, gdp_level, timeframe=timeframe)
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
     all_ids = list(spec.series.values()) + [spec.gdp_series_id]
     st.caption(f"Source: FRED — {', '.join(all_ids)}")
