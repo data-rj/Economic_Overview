@@ -30,6 +30,15 @@ def trailing_sum(series: pd.Series, window: int = 12) -> pd.Series:
     return series.rolling(window=window, min_periods=window).sum()
 
 
+def annualized_pct_change(series: pd.Series) -> pd.Series:
+    """Single-period % change compounded to an annual rate (SAAR-style) — e.g. for
+    monthly index data: ((v_t / v_t-1) ** 12 - 1) * 100. Same convention BEA/BLS use
+    for headline "monthly annualized" / quarterly-annualized inflation and growth
+    figures."""
+    periods = infer_periods_per_year(series)
+    return ((series / series.shift(1)) ** periods - 1) * 100
+
+
 def rate_of_change(series: pd.Series, short: bool) -> pd.Series:
     """ITR-style RoC: the YoY % change of a trailing moving average.
 

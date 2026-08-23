@@ -22,13 +22,15 @@ class ChartSpec:
     index_to_100: bool = False
     placeholder: bool = False
     placeholder_note: str = ""
-    kind: str = "line"  # "line", "share", "ratio", "gdp_contribution", or "potential_gdp"
+    kind: str = "line"  # "line", "share", "ratio", "gdp_contribution", "potential_gdp", "deficit_debt", "inflation"
     gdp_series_id: str = ""  # denominator series for kind="gdp_contribution"/"potential_gdp"/"ratio"
     forecast: bool = False  # overlay a linear-regression forecast (Level view only)
     forecast_lookback: int = 4  # number of trailing actual periods to fit the forecast line to
     forecast_horizon: int = 2  # number of future periods to forecast
     show_average: bool = False  # overlay a flat full-history-average reference line (Level view only)
     percent_labels: tuple[str, ...] = ()  # series labels to legend-format as % when a chart mixes units
+    rate_series: dict[str, str] = field(default_factory=dict)  # kind="inflation": already-a-rate companion series
+    rate_series_view: str = "Monthly Annualized %"  # kind="inflation": the one view rate_series appears in
 
 
 @dataclass
@@ -470,19 +472,39 @@ SECTIONS: list[Section] = [
         charts=[
             ChartSpec(
                 id="cpi",
-                title="CPI: Headline vs Core",
-                why="Most-watched inflation gauge.",
+                title="CPI: Headline, Core & Trimmed Mean",
+                why=(
+                    "Most-watched inflation gauge. Trimmed Mean CPI (Cleveland Fed) strips out "
+                    "each month's most extreme price moves entirely, rather than just excluding "
+                    "food & energy like Core — often a cleaner read on underlying inflation "
+                    "momentum. It only appears in the Monthly Annualized view since that's the "
+                    "rate the Cleveland Fed publishes it in natively (it has no meaningful index "
+                    "level, and RoC has been dropped from this chart in favor of that direct "
+                    "monthly-annualized comparison)."
+                ),
+                kind="inflation",
                 series={"CPI (Headline)": "CPIAUCSL", "CPI (Core)": "CPILFESL"},
+                rate_series={"CPI (Trimmed Mean)": "TRMMEANCPIM159SFRBCLE"},
+                rate_series_view="Monthly Annualized %",
                 unit="Index (1982-84=100)",
-                roc_eligible=True,
             ),
             ChartSpec(
                 id="pce_price_index",
-                title="PCE Price Index: Headline vs Core",
-                why="The Fed's preferred inflation measure.",
+                title="PCE Price Index: Headline, Core & Trimmed Mean",
+                why=(
+                    "The Fed's preferred inflation measure. Trimmed Mean PCE (Dallas Fed) strips "
+                    "out each period's most extreme price moves entirely, rather than just "
+                    "excluding food & energy like Core. It only appears in the YoY view since "
+                    "that's the rate the Dallas Fed publishes it in natively (a 12-month change, "
+                    "not monthly-annualized like the CPI chart's trimmed mean above) — RoC has "
+                    "been dropped from this chart in favor of the Monthly Annualized view for "
+                    "Headline/Core."
+                ),
+                kind="inflation",
                 series={"PCE Price Index (Headline)": "PCEPI", "PCE Price Index (Core)": "PCEPILFE"},
+                rate_series={"PCE (Trimmed Mean)": "PCETRIM12M159SFRBDAL"},
+                rate_series_view="YoY %",
                 unit="Index (2017=100)",
-                roc_eligible=True,
             ),
             ChartSpec(
                 id="rates",
@@ -490,6 +512,34 @@ SECTIONS: list[Section] = [
                 why="Policy stance and yield curve signal.",
                 series={"Fed Funds Rate": "FEDFUNDS", "10Y Treasury": "DGS10", "10Y-2Y Spread": "T10Y2Y"},
                 unit="%",
+            ),
+            ChartSpec(
+                id="m2_money_supply",
+                title="M2 Money Supply",
+                why=(
+                    "Broad money supply, alongside M2 Velocity (nominal GDP / M2, published "
+                    "directly by FRED) — the classic companion question: is money supply growth "
+                    "translating into economic activity, or just accumulating? Velocity is a "
+                    "different scale (a ratio near 1, vs. M2's trillions), so it's indexed to a "
+                    "common start alongside M2."
+                ),
+                series={"M2 Money Supply": "M2SL", "M2 Velocity": "M2V"},
+                unit="Index (start = 100)",
+                roc_eligible=True,
+                index_to_100=True,
+            ),
+            ChartSpec(
+                id="fed_balance_sheet",
+                title="Federal Reserve Balance Sheet",
+                why=(
+                    "Total assets held by the Fed (Treasuries, MBS, and other holdings from "
+                    "QE/QT) — the balance-sheet counterpart to interest-rate policy above, and "
+                    "closely tied to the M2 growth story: QE-era asset purchases were a major "
+                    "driver of M2 expansion."
+                ),
+                series={"Fed Balance Sheet (Total Assets)": "WALCL"},
+                unit="$ millions",
+                roc_eligible=True,
             ),
         ],
     ),

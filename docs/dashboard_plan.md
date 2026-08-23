@@ -96,13 +96,19 @@ GDP Price Deflator chart was removed (no longer needed).
 
 Major Federal Budget Components chart (Defense/Social Security/Medicare/etc.) — skipped for now; needs OMB/Treasury budget-function series this session couldn't verify with confidence.
 
-## 7. Prices & Monetary Policy (3 charts)
+## 7. Prices & Monetary Policy (5 charts)
 
-| Chart | FRED series | RoC | Why |
+Kept as its own section rather than merging into Macro Overview — preserves
+the deliberate "closes the loop" placement (inflation/policy context for
+every section above it) and keeps Macro Overview from growing to ~10 charts.
+
+| Chart | FRED series | View | Why |
 |---|---|---|---|
-| CPI headline vs core, YoY | `CPIAUCSL`, `CPILFESL` | 🔁 | Most-watched inflation gauge |
-| PCE Price Index headline vs core, YoY | `PCEPI`, `PCEPILFE` | 🔁 | The Fed's preferred inflation measure |
+| CPI: Headline, Core & Trimmed Mean | `CPIAUCSL`, `CPILFESL`, `TRMMEANCPIM159SFRBCLE` | Level / YoY / Monthly Annualized (RoC removed) | Most-watched inflation gauge; Trimmed Mean (Cleveland Fed) only shows in Monthly Annualized view, its native unit |
+| PCE Price Index: Headline, Core & Trimmed Mean | `PCEPI`, `PCEPILFE`, `PCETRIM12M159SFRBDAL` | Level / YoY / Monthly Annualized (RoC removed) | The Fed's preferred measure; Trimmed Mean (Dallas Fed) only shows in YoY view, its native unit |
 | Fed Funds Rate vs 10Y Treasury | `FEDFUNDS`, `DGS10`, `T10Y2Y` | | Policy stance and yield curve signal |
+| M2 Money Supply + M2 Velocity, indexed | `M2SL`, `M2V` | 🔁 | Is money supply growth translating into activity, or just accumulating? |
+| Federal Reserve Balance Sheet | `WALCL` | 🔁 | QE/QT counterpart to rate policy; tied to the M2 growth story |
 
 ## 8. Business Cycle / Rate of Change (summary section)
 

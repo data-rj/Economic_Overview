@@ -51,7 +51,9 @@ RECESSION_BAND = "rgba(11, 11, 11, 0.06)"
 VIEW_LEVEL = "Level"
 VIEW_YOY = "YoY %"
 VIEW_ROC = "RoC (3/12 MMA)"
+VIEW_MOM_SAAR = "Monthly Annualized %"
 VIEWS = [VIEW_LEVEL, VIEW_YOY, VIEW_ROC]
+INFLATION_VIEWS = [VIEW_LEVEL, VIEW_YOY, VIEW_MOM_SAAR]
 
 TIMEFRAME_OPTIONS = ["1Y", "5Y", "10Y", "20Y", "Max"]
 _TIMEFRAME_YEARS = {"1Y": 1, "5Y": 5, "10Y": 10, "20Y": 20, "Max": None}
@@ -417,3 +419,66 @@ def build_dual_axis_chart(
         ),
     )
     return fig
+
+
+def build_inflation_chart(
+    index_series: dict[str, pd.Series],
+    rate_series: dict[str, pd.Series],
+    view: str,
+    timeframe: str = "Max",
+    rate_series_view: str = VIEW_MOM_SAAR,
+) -> go.Figure:
+    """CPI/PCE-style chart: index-level series (Headline, Core) that get transformed
+    per the selected view, plus a companion "already a rate" series (e.g. a trimmed-
+    mean measure published directly as a % change) that only appears in whichever
+    single view matches the unit it's natively published in — it has no meaningful
+    index level, and taking YoY/annualized change of an already-annualized rate
+    isn't meaningful either, so it doesn't participate in the other views.
+    """
+    fig = go.Figure()
+    non_empty_index = {label: s for label, s in index_series.items() if not s.empty}
+    non_empty_rate = {label: s for label, s in rate_series.items() if not s.empty}
+    if not non_empty_index and not non_empty_rate:
+        return fig
+
+    all_series = list(non_empty_index.values()) + list(non_empty_rate.values())
+    overall_end = max(s.index.max() for s in all_series)
+    start_date = _timeframe_start(overall_end, timeframe)
+
+    y_title = "Index"
+    i = 0
+    for label, s in non_empty_index.items():
+        color = CATEGORICAL[i % len(CATEGORICAL)]
+        i += 1
+        if view == VIEW_YOY:
+            plotted = transforms.yoy_pct_change(s)
+            y_title = "YoY % change"
+        elif view == VIEW_MOM_SAAR:
+            plotted = transforms.annualized_pct_change(s)
+            y_title = "Monthly change, annualized (%)"
+        else:
+            plotted = s
+            y_title = "Index"
+        visible = _clip(plotted, start_date)
+        fig.add_trace(go.Scatter(
+            x=visible.index, y=visible.values,
+            name=_legend_name(label, plotted, is_percent=view != VIEW_LEVEL),
+            line=dict(color=color, width=2),
+        ))
+
+    if view == rate_series_view:
+        for label, s in non_empty_rate.items():
+            color = CATEGORICAL[i % len(CATEGORICAL)]
+            i += 1
+            visible = _clip(s, start_date)
+            fig.add_trace(go.Scatter(
+                x=visible.index, y=visible.values,
+                name=_legend_name(label, s, is_percent=True),
+                line=dict(color=color, width=2, dash="dot"),
+            ))
+        y_title = rate_series_view.replace(" %", "") + " (%)"
+
+    display_start = start_date if start_date is not None else min(s.index.min() for s in all_series)
+    _add_recession_bands(fig, display_start, overall_end)
+
+    return _apply_layout(fig, y_title)

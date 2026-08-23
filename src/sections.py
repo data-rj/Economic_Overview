@@ -37,6 +37,10 @@ def render_chart(spec: ChartSpec) -> None:
         render_deficit_debt_chart(spec)
         return
 
+    if spec.kind == "inflation":
+        render_inflation_chart(spec)
+        return
+
     series_map = {label: fetch_series(series_id) for label, series_id in spec.series.items()}
     if all(s.empty for s in series_map.values()):
         details = "; ".join(
@@ -141,6 +145,43 @@ def render_deficit_debt_chart(spec: ChartSpec) -> None:
     )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
     st.caption(f"Source: FRED — {', '.join(series_ids)}")
+    st.divider()
+
+
+def render_inflation_chart(spec: ChartSpec) -> None:
+    index_map = {label: fetch_series(series_id) for label, series_id in spec.series.items()}
+    rate_map = {label: fetch_series(series_id) for label, series_id in spec.rate_series.items()}
+    all_ids = list(spec.series.values()) + list(spec.rate_series.values())
+
+    if all(s.empty for s in index_map.values()) and all(s.empty for s in rate_map.values()):
+        details = "; ".join(f"{series_id} — {fetch_series_error(series_id)}" for series_id in all_ids)
+        st.warning(f"No data returned. {details}")
+        st.divider()
+        return
+
+    control_cols = st.columns([3, 1])
+    with control_cols[0]:
+        view = st.radio(
+            "View",
+            charts.INFLATION_VIEWS,
+            horizontal=True,
+            key=f"view_{spec.id}",
+            label_visibility="collapsed",
+        )
+    with control_cols[1]:
+        timeframe = st.selectbox(
+            "Timeframe",
+            charts.TIMEFRAME_OPTIONS,
+            index=len(charts.TIMEFRAME_OPTIONS) - 1,
+            key=f"timeframe_{spec.id}",
+            label_visibility="collapsed",
+        )
+
+    fig = charts.build_inflation_chart(
+        index_map, rate_map, view, timeframe=timeframe, rate_series_view=spec.rate_series_view,
+    )
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.caption(f"Source: FRED — {', '.join(all_ids)}")
     st.divider()
 
 
