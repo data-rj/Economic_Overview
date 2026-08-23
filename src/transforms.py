@@ -6,11 +6,15 @@ import pandas as pd
 
 
 def infer_periods_per_year(series: pd.Series) -> int:
-    """Guess 12 (monthly) or 4 (quarterly) from the median spacing of the index."""
+    """Guess 52 (weekly), 12 (monthly), or 4 (quarterly) from the median index spacing."""
     if len(series) < 2:
         return 12
     median_days = series.index.to_series().diff().dropna().dt.days.median()
-    return 4 if median_days > 60 else 12
+    if median_days > 60:
+        return 4
+    if median_days <= 10:
+        return 52
+    return 12
 
 
 def yoy_pct_change(series: pd.Series) -> pd.Series:
@@ -25,11 +29,16 @@ def moving_average(series: pd.Series, window: int) -> pd.Series:
 def rate_of_change(series: pd.Series, short: bool) -> pd.Series:
     """ITR-style RoC: the YoY % change of a trailing moving average.
 
-    `short=True` -> 3-period MA (3MMA monthly, 1-quarter MA quarterly).
-    `short=False` -> 12-period MA (12MMA monthly, 4-quarter MA quarterly).
+    `short=True` -> 3-period MA (3MMA monthly, 1-quarter MA quarterly, 13-week MA weekly).
+    `short=False` -> 12-period MA (12MMA monthly, 4-quarter MA quarterly, 52-week MA weekly).
     """
     periods = infer_periods_per_year(series)
-    window = (1 if periods == 4 else 3) if short else (4 if periods == 4 else 12)
+    if periods == 4:
+        window = 1 if short else 4
+    elif periods == 52:
+        window = 13 if short else 52
+    else:
+        window = 3 if short else 12
     ma = moving_average(series, window)
     return ma.pct_change(periods=periods) * 100
 

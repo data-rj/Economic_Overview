@@ -43,13 +43,15 @@ level / YoY only.
 
 GDP Price Deflator chart was removed (no longer needed).
 
-## 2. Labor Market (3 charts)
+## 2. Labor Market (5 charts)
 
 | Chart | FRED series | RoC | Why |
 |---|---|---|---|
-| Unemployment Rate | `UNRATE` | | Headline labor market slack |
-| Nonfarm Payrolls, monthly change | `PAYEMS` | 🔁 | Job creation pace |
+| Unemployment Rate (U-3) + Underemployment Rate (U-6) | `UNRATE`, `U6RATE` | | Headline slack vs. total slack including marginally attached/part-time-for-economic-reasons workers |
+| Nonfarm Payrolls + Average Hourly Earnings, indexed | `PAYEMS`, `CES0500000003` | 🔁 | Job creation pace vs. wage growth pace |
+| Initial Jobless Claims | `ICSA` | | Weekly leading indicator, moves before payrolls/UNRATE |
 | JOLTS Openings & Quits | `JTSJOL`, `JTSQUR` | 🔁 (openings only) | Labor demand and worker confidence |
+| Labor Force Participation Rate by age (Overall, 16-24, 25-54, 55+) | `CIVPART`, `LNS11300012`, `LNS11300060`, `LNS11324230` | | Cyclical softness vs. structural/demographic shifts |
 
 ## 3. Consumer (5 charts)
 

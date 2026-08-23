@@ -112,17 +112,37 @@ SECTIONS: list[Section] = [
             ChartSpec(
                 id="unemployment_rate",
                 title="Unemployment Rate",
-                why="Headline labor market slack.",
-                series={"Unemployment Rate": "UNRATE"},
+                why=(
+                    "Headline labor market slack (U-3), alongside U-6 — total unemployed plus "
+                    "marginally attached and part-time-for-economic-reasons workers. The gap "
+                    "between the two shows how much slack is hidden beneath the headline number."
+                ),
+                series={"Unemployment Rate (U-3)": "UNRATE", "Underemployment Rate (U-6)": "U6RATE"},
                 unit="%",
             ),
             ChartSpec(
                 id="payrolls",
                 title="Nonfarm Payrolls",
-                why="Job creation pace.",
-                series={"Nonfarm Payrolls": "PAYEMS"},
-                unit="thousands of jobs",
+                why=(
+                    "Job creation pace alongside Average Hourly Earnings — shows whether wage "
+                    "growth is keeping pace with (or outrunning) job growth. Indexed to a common "
+                    "start since payrolls (a level) and hourly earnings ($/hr) aren't the same unit."
+                ),
+                series={"Nonfarm Payrolls": "PAYEMS", "Average Hourly Earnings": "CES0500000003"},
+                unit="Index (start = 100)",
                 roc_eligible=True,
+                index_to_100=True,
+            ),
+            ChartSpec(
+                id="jobless_claims",
+                title="Initial Jobless Claims",
+                why=(
+                    "Weekly leading indicator of labor-market turning points — moves before "
+                    "payrolls and the unemployment rate do, since it captures new layoffs as "
+                    "they happen rather than a monthly snapshot."
+                ),
+                series={"Initial Jobless Claims": "ICSA"},
+                unit="Level (weekly, SA)",
             ),
             ChartSpec(
                 id="jolts",
@@ -132,6 +152,24 @@ SECTIONS: list[Section] = [
                 unit="Index (start = 100)",
                 roc_eligible=True,
                 index_to_100=True,
+            ),
+            ChartSpec(
+                id="labor_force_participation",
+                title="Labor Force Participation Rate by Age Group",
+                why=(
+                    "Overall participation rate plus by age band — distinguishes cyclical labor "
+                    "market softness from structural/demographic shifts (e.g. an aging workforce "
+                    "pulling the overall rate down even as prime-age participation holds up). "
+                    "FRED's youngest measured cohort starts at 16, so \"24 and under\" is the "
+                    "16-24 age band."
+                ),
+                series={
+                    "Overall": "CIVPART",
+                    "16-24": "LNS11300012",
+                    "25-54": "LNS11300060",
+                    "55+": "LNS11324230",
+                },
+                unit="%",
             ),
         ],
     ),
