@@ -1,6 +1,7 @@
 """Level / YoY / Rate-of-Change (ITR Economics-style 3MMA & 12MMA) transforms."""
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 
 
@@ -36,3 +37,24 @@ def rate_of_change(series: pd.Series, short: bool) -> pd.Series:
 def roc_pair(series: pd.Series) -> tuple[pd.Series, pd.Series]:
     """Return (short RoC, long RoC) — the 3MMA/12MMA (or 1Q/4Q) pair."""
     return rate_of_change(series, short=True), rate_of_change(series, short=False)
+
+
+def linear_forecast(series: pd.Series, lookback: int = 4, horizon: int = 2) -> pd.Series:
+    """Extrapolate `horizon` future points via a least-squares line fit over the
+    trailing `lookback` actual points. Index frequency (monthly/quarterly) is
+    inferred from the series and extended forward accordingly."""
+    clean = series.dropna()
+    if len(clean) < lookback:
+        return pd.Series(dtype=float)
+
+    recent = clean.iloc[-lookback:]
+    x = np.arange(lookback)
+    slope, intercept = np.polyfit(x, recent.values, 1)
+    future_x = np.arange(lookback, lookback + horizon)
+    future_vals = slope * future_x + intercept
+
+    periods = infer_periods_per_year(clean)
+    step_months = 3 if periods == 4 else 1
+    last_date = clean.index[-1]
+    future_dates = [last_date + pd.DateOffset(months=step_months * (i + 1)) for i in range(horizon)]
+    return pd.Series(future_vals, index=pd.DatetimeIndex(future_dates), name=series.name)

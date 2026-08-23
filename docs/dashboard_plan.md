@@ -36,10 +36,12 @@ level / YoY only.
 
 | Chart | FRED series | RoC | Why |
 |---|---|---|---|
-| Real GDP, level + YoY % | `GDPC1` | 🔁 | Headline size/trend of the economy |
-| Real GDP growth, quarterly annualized | `A191RL1Q225SBEA` | | The number everyone quotes each release |
-| Contributions to GDP growth by component (stacked bar: PCE, Investment, Net Exports, Govt) | NIPA "contribution to % change" series (BEA Table 1.1.2, mirrored on FRED) — *verify exact series IDs when building* | | Shows what is driving growth, sets up the rest of the dashboard |
-| GDP Price Deflator / Nominal vs Real GDP | `GDP`, `GDPC1`, `GDPDEF` | 🔁 | Separates real growth from inflation |
+| Real GDP, level + YoY % (+ 2Q linear-regression forecast) | `GDPC1` | 🔁 | Headline size/trend of the economy |
+| Real GDP growth, quarterly annualized (+ 2Q linear-regression forecast) | `A191RL1Q225SBEA` | | The number everyone quotes each release |
+| Contributions to GDP growth by component (stacked bar: PCE, Investment, Net Exports, Govt) — **implemented as an approximation**, computed dashboard-side from component levels (`PCEC96`, `GPDIC1`, `GCEC1`, `EXPGSC1`, `IMPGSC1`) relative to prior-quarter GDP, rather than BEA's own pre-built contribution series (IDs for those were never confirmed) | see above | | Shows what is driving growth, sets up the rest of the dashboard |
+| Potential GDP (estimated) vs actual, shaded output gap — two-factor growth-accounting estimate (trend productivity + trend labor force growth, compounded from an actual-GDP-calibrated base) | `OPHNFB`, `CLF16OV`, `GDPC1` | | The economy's sustainable output ceiling, standard CBO-style two-factor framework |
+
+GDP Price Deflator chart was removed (no longer needed).
 
 ## 2. Labor Market (3 charts)
 

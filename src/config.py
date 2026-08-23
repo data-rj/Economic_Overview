@@ -22,8 +22,9 @@ class ChartSpec:
     index_to_100: bool = False
     placeholder: bool = False
     placeholder_note: str = ""
-    kind: str = "line"  # "line" or "gdp_contribution"
-    gdp_series_id: str = ""  # denominator series for kind="gdp_contribution"
+    kind: str = "line"  # "line", "gdp_contribution", or "potential_gdp"
+    gdp_series_id: str = ""  # denominator/reference GDP series for kind="gdp_contribution"/"potential_gdp"
+    forecast: bool = False  # overlay a 2-period linear-regression forecast (Level view only)
 
 
 @dataclass
@@ -43,17 +44,25 @@ SECTIONS: list[Section] = [
             ChartSpec(
                 id="gdp_real",
                 title="Real GDP",
-                why="Headline size/trend of the economy.",
+                why=(
+                    "Headline size/trend of the economy. Dashed line is a 2-quarter forecast from "
+                    "a simple linear regression fit to the prior 4 quarters."
+                ),
                 series={"Real GDP": "GDPC1"},
                 unit="$ billions (2017 chained)",
                 roc_eligible=True,
+                forecast=True,
             ),
             ChartSpec(
                 id="gdp_growth",
                 title="Real GDP Growth (Quarterly, Annualized)",
-                why="The number everyone quotes each release.",
+                why=(
+                    "The number everyone quotes each release. Dashed line is a 2-quarter forecast "
+                    "from a simple linear regression fit to the prior 4 quarters."
+                ),
                 series={"Real GDP Growth (Annualized)": "A191RL1Q225SBEA"},
                 unit="%",
+                forecast=True,
             ),
             ChartSpec(
                 id="gdp_contributions",
@@ -76,12 +85,22 @@ SECTIONS: list[Section] = [
                 unit="Percentage points (annualized)",
             ),
             ChartSpec(
-                id="gdp_deflator",
-                title="GDP Price Deflator",
-                why="Separates real growth from inflation.",
-                series={"GDP Deflator": "GDPDEF"},
-                unit="Index (2017=100)",
-                roc_eligible=True,
+                id="potential_gdp",
+                title="Potential GDP (Estimated)",
+                why=(
+                    "The economy's sustainable output ceiling — actual GDP vs. an estimate of "
+                    "potential GDP, with the shaded band as the implied output gap. Estimated via "
+                    "the standard two-factor growth-accounting identity (GDP = Labor Productivity "
+                    "x Labor Input), using an 8-quarter trailing-average trend growth rate for "
+                    "productivity and the labor force in place of noisy actual growth — the same "
+                    "simplified two-factor framework CBO and standard macro texts use, not an "
+                    "exact match to CBO's own published estimate (which also models capital "
+                    "services, TFP, and NAIRU separately)."
+                ),
+                kind="potential_gdp",
+                series={"Productivity": "OPHNFB", "Labor Force": "CLF16OV"},
+                gdp_series_id="GDPC1",
+                unit="$ billions (2017 chained)",
             ),
         ],
     ),

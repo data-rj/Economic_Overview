@@ -21,6 +21,10 @@ def render_chart(spec: ChartSpec) -> None:
         render_gdp_contribution_chart(spec)
         return
 
+    if spec.kind == "potential_gdp":
+        render_potential_gdp_chart(spec)
+        return
+
     series_map = {label: fetch_series(series_id) for label, series_id in spec.series.items()}
     if all(s.empty for s in series_map.values()):
         details = "; ".join(
@@ -52,9 +56,40 @@ def render_chart(spec: ChartSpec) -> None:
 
     fig = charts.build_chart(
         series_map, view, unit=spec.unit, index_to_100=spec.index_to_100, timeframe=timeframe,
+        forecast=spec.forecast,
     )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
     st.caption(f"Source: FRED — {', '.join(spec.series.values())}")
+    st.divider()
+
+
+def render_potential_gdp_chart(spec: ChartSpec) -> None:
+    productivity = fetch_series(spec.series["Productivity"])
+    labor_force_monthly = fetch_series(spec.series["Labor Force"])
+    gdp_level = fetch_series(spec.gdp_series_id)
+    labor_force = labor_force_monthly.resample("QS").mean() if not labor_force_monthly.empty else labor_force_monthly
+
+    if gdp_level.empty or productivity.empty or labor_force.empty:
+        all_ids = list(spec.series.values()) + [spec.gdp_series_id]
+        details = "; ".join(f"{series_id} — {fetch_series_error(series_id)}" for series_id in all_ids)
+        st.warning(f"No data returned. {details}")
+        st.divider()
+        return
+
+    _, timeframe_col = st.columns([3, 1])
+    with timeframe_col:
+        timeframe = st.selectbox(
+            "Timeframe",
+            charts.TIMEFRAME_OPTIONS,
+            index=len(charts.TIMEFRAME_OPTIONS) - 1,
+            key=f"timeframe_{spec.id}",
+            label_visibility="collapsed",
+        )
+
+    fig = charts.build_potential_gdp_chart(gdp_level, productivity, labor_force, timeframe=timeframe)
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    all_ids = list(spec.series.values()) + [spec.gdp_series_id]
+    st.caption(f"Source: FRED — {', '.join(all_ids)}")
     st.divider()
 
 
