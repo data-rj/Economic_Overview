@@ -76,23 +76,25 @@ GDP Price Deflator chart was removed (no longer needed).
 | Corporate Bond Spreads: Baa, BB, B, CCC & Below | `BAA10Y`, `BAMLH0A1HYBB`, `BAMLH0A2HYB`, `BAMLH0A3HYC` | | Risk appetite across the full credit spectrum |
 | Corporate Loan Delinquencies & Charge-Offs | `DRBLACBS`, `CORBLACBS` | | Actual bank-reported corporate credit stress |
 
-## 5. Public & Private Investment (4 charts)
+## 5. Public & Private Investment (5 charts)
 
 | Chart | FRED series | RoC | Why |
 |---|---|---|---|
 | Real Private Fixed Investment, nonresidential/residential split | `PNFI`, `PRFI` | 🔁 | Capex + housing, split |
-| Nonresidential Investment by type: Equipment / Structures / IP products | BEA Table 5.3.6 series on FRED — *verify exact series IDs when building* | 🔁 | Are firms investing in machines, buildings, or software/R&D? |
+| Nonresidential Investment by type: Equipment / Structures / IP products | BEA Table 5.3.6 series on FRED — *still unverified, left as placeholder; user declined the construction/capex proxy alternative* | 🔁 | Are firms investing in machines, buildings, or software/R&D? |
 | Housing Starts & Building Permits | `HOUST`, `PERMIT` | 🔁 | Leading indicator, private residential investment |
 | Business Inventory-to-Sales Ratio | `ISRATIO` | | Signals demand vs overproduction |
+| Total Business Inventories | `BUSINV` | 🔁 | Decomposes the ratio above — inventory buildup vs. sales change |
 
-## 6. Government (4 charts)
+## 6. Government (3 charts)
 
 | Chart | FRED series | RoC | Why |
 |---|---|---|---|
 | Government Consumption & Investment (contribution to GDP) | `GCE` | 🔁 | Govt's direct GDP footprint |
 | Federal Outlays vs Receipts | `FGEXPND`, `FGRECPT` | 🔁 | Spending vs revenue trend |
-| Federal Deficit | `MTSDS133FMS` | | The gap, and its trajectory (sign-changing series, RoC not meaningful) |
-| Federal Debt Held by Public, % of GDP | `GFDEGDQ188S` | | Long-run fiscal sustainability |
+| Federal Deficit (trailing 12-month) vs. Federal Debt (% of GDP), dual axis | `MTSDS133FMS`, `GFDEGDQ188S` | | TTM smooths Treasury seasonality; dual axis is a deliberate exception since the deficit crosses zero and can't be indexed against an always-positive ratio |
+
+Major Federal Budget Components chart (Defense/Social Security/Medicare/etc.) — skipped for now; needs OMB/Treasury budget-function series this session couldn't verify with confidence.
 
 ## 7. Prices & Monetary Policy (3 charts)
 

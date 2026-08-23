@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from . import charts
+from . import charts, transforms
 from .config import ChartSpec, Section
 from .fred import fetch_series, fetch_series_error
 
@@ -31,6 +31,10 @@ def render_chart(spec: ChartSpec) -> None:
 
     if spec.kind == "ratio":
         render_ratio_chart(spec)
+        return
+
+    if spec.kind == "deficit_debt":
+        render_deficit_debt_chart(spec)
         return
 
     series_map = {label: fetch_series(series_id) for label, series_id in spec.series.items()}
@@ -101,6 +105,42 @@ def render_ratio_chart(spec: ChartSpec) -> None:
     fig = charts.build_chart({label: ratio}, charts.VIEW_LEVEL, unit=spec.unit, timeframe=timeframe)
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
     st.caption(f"Source: FRED — {numerator_id}, {spec.gdp_series_id}")
+    st.divider()
+
+
+def render_deficit_debt_chart(spec: ChartSpec) -> None:
+    labels = list(spec.series.keys())
+    series_ids = list(spec.series.values())
+    deficit_label, debt_label = labels[0], labels[1]
+    deficit_monthly = fetch_series(spec.series[deficit_label])
+    debt_pct_gdp = fetch_series(spec.series[debt_label])
+
+    if deficit_monthly.empty or debt_pct_gdp.empty:
+        details = "; ".join(f"{series_id} — {fetch_series_error(series_id)}" for series_id in series_ids)
+        st.warning(f"No data returned. {details}")
+        st.divider()
+        return
+
+    deficit_ttm = transforms.trailing_sum(deficit_monthly, window=12).dropna()
+    deficit_ttm.name = spec.series[deficit_label]
+
+    _, timeframe_col = st.columns([3, 1])
+    with timeframe_col:
+        timeframe = st.selectbox(
+            "Timeframe",
+            charts.TIMEFRAME_OPTIONS,
+            index=len(charts.TIMEFRAME_OPTIONS) - 1,
+            key=f"timeframe_{spec.id}",
+            label_visibility="collapsed",
+        )
+
+    fig = charts.build_dual_axis_chart(
+        deficit_ttm, deficit_label, "$ millions",
+        debt_pct_gdp, debt_label, "%",
+        timeframe=timeframe,
+    )
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.caption(f"Source: FRED — {', '.join(series_ids)}")
     st.divider()
 
 

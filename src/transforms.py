@@ -26,6 +26,10 @@ def moving_average(series: pd.Series, window: int) -> pd.Series:
     return series.rolling(window=window, min_periods=window).mean()
 
 
+def trailing_sum(series: pd.Series, window: int = 12) -> pd.Series:
+    return series.rolling(window=window, min_periods=window).sum()
+
+
 def rate_of_change(series: pd.Series, short: bool) -> pd.Series:
     """ITR-style RoC: the YoY % change of a trailing moving average.
 

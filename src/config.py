@@ -410,6 +410,17 @@ SECTIONS: list[Section] = [
                 series={"Inventory-to-Sales Ratio": "ISRATIO"},
                 unit="ratio",
             ),
+            ChartSpec(
+                id="business_inventories",
+                title="Total Business Inventories",
+                why=(
+                    "Companion to the ratio above — decomposes whether the ratio is moving "
+                    "because inventories are building up (this chart) or sales are changing."
+                ),
+                series={"Total Business Inventories": "BUSINV"},
+                unit="$ millions",
+                roc_eligible=True,
+            ),
         ],
     ),
     Section(
@@ -435,17 +446,20 @@ SECTIONS: list[Section] = [
             ),
             ChartSpec(
                 id="federal_deficit",
-                title="Federal Deficit",
-                why="The gap, and its trajectory.",
-                series={"Federal Surplus/Deficit": "MTSDS133FMS"},
-                unit="$ millions",
-            ),
-            ChartSpec(
-                id="debt_to_gdp",
-                title="Federal Debt Held by Public, % of GDP",
-                why="Long-run fiscal sustainability.",
-                series={"Federal Debt (% of GDP)": "GFDEGDQ188S"},
-                unit="%",
+                title="Federal Deficit (TTM) vs. Federal Debt (% of GDP)",
+                why=(
+                    "Trailing 12-month sum of the deficit, which smooths out the extreme "
+                    "month-to-month seasonality in the raw Treasury data (tax-season months vs. "
+                    "others), shown against Federal Debt as % of GDP on a second axis. This is a "
+                    "deliberate exception to this dashboard's usual single-axis rule: the "
+                    "deficit is a signed flow that crosses zero, so it can't be indexed to a "
+                    "common base alongside an always-positive ratio like debt-to-GDP."
+                ),
+                kind="deficit_debt",
+                series={
+                    "Federal Deficit (TTM)": "MTSDS133FMS",
+                    "Federal Debt (% of GDP)": "GFDEGDQ188S",
+                },
             ),
         ],
     ),

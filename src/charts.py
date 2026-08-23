@@ -2,9 +2,12 @@
 
 Colors and chrome follow the dashboard-design reference palette: fixed
 categorical hue order (never cycled/reassigned by filter), hairline
-gridlines, muted axis ink, and a single shared y-axis per chart (no
-dual-axis charts — series on very different scales use `index_to_100`
-instead).
+gridlines, muted axis ink, and a single shared y-axis per chart — series on
+very different scales use `index_to_100` instead of a second axis. The one
+deliberate exception is `build_dual_axis_chart`, used only where indexing
+genuinely doesn't work (a signed flow like the deficit can't be indexed
+against an always-positive ratio like debt-to-GDP, since indexing assumes
+a meaningful non-zero base).
 
 Timeframe is controlled by a Streamlit dropdown (`TIMEFRAME_OPTIONS`) rather
 than Plotly's native range slider/selector. Two reasons: the native slider's
@@ -354,3 +357,63 @@ def build_potential_gdp_chart(
     _add_recession_bands(fig, display_start, overall_end)
 
     return _apply_layout(fig, "$ billions (2017 chained)")
+
+
+def build_dual_axis_chart(
+    primary: pd.Series,
+    primary_label: str,
+    primary_unit: str,
+    secondary: pd.Series,
+    secondary_label: str,
+    secondary_unit: str,
+    timeframe: str = "Max",
+) -> go.Figure:
+    """Two series on independent y-axes. Deliberate exception to the single-axis
+    rule used everywhere else in this dashboard — see the module docstring.
+    """
+    fig = go.Figure()
+    if primary.empty or secondary.empty:
+        return fig
+
+    overall_end = max(primary.index.max(), secondary.index.max())
+    start_date = _timeframe_start(overall_end, timeframe)
+    primary_visible = _clip(primary, start_date)
+    secondary_visible = _clip(secondary, start_date)
+
+    primary_color, secondary_color = CATEGORICAL[0], CATEGORICAL[1]
+
+    fig.add_trace(go.Scatter(
+        x=primary_visible.index, y=primary_visible.values,
+        name=_legend_name(primary_label, primary, is_percent="%" in primary_unit),
+        line=dict(color=primary_color, width=2), yaxis="y",
+    ))
+    fig.add_trace(go.Scatter(
+        x=secondary_visible.index, y=secondary_visible.values,
+        name=_legend_name(secondary_label, secondary, is_percent="%" in secondary_unit),
+        line=dict(color=secondary_color, width=2), yaxis="y2",
+    ))
+
+    display_start = start_date if start_date is not None else min(primary.index.min(), secondary.index.min())
+    _add_recession_bands(fig, display_start, overall_end)
+    fig.add_hline(y=0, line_color=AXIS, line_width=1)
+
+    fig.update_layout(
+        template="plotly_white",
+        plot_bgcolor=SURFACE,
+        paper_bgcolor=SURFACE,
+        font=dict(color=INK_PRIMARY, family="system-ui, -apple-system, Segoe UI, sans-serif"),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(color=INK_SECONDARY)),
+        margin=dict(l=10, r=10, t=10, b=10),
+        hovermode="x unified",
+        dragmode=False,
+        xaxis=dict(showgrid=False, linecolor=AXIS, tickfont=dict(color=MUTED), fixedrange=True),
+        yaxis=dict(
+            title=primary_unit, tickfont=dict(color=primary_color), title_font=dict(color=primary_color),
+            showgrid=True, gridcolor=GRIDLINE, zeroline=False, fixedrange=True,
+        ),
+        yaxis2=dict(
+            title=secondary_unit, tickfont=dict(color=secondary_color), title_font=dict(color=secondary_color),
+            overlaying="y", side="right", showgrid=False, zeroline=False, fixedrange=True,
+        ),
+    )
+    return fig
