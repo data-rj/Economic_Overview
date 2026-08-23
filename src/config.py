@@ -22,11 +22,13 @@ class ChartSpec:
     index_to_100: bool = False
     placeholder: bool = False
     placeholder_note: str = ""
-    kind: str = "line"  # "line", "share", "gdp_contribution", or "potential_gdp"
-    gdp_series_id: str = ""  # denominator/reference GDP series for kind="gdp_contribution"/"potential_gdp"
+    kind: str = "line"  # "line", "share", "ratio", "gdp_contribution", or "potential_gdp"
+    gdp_series_id: str = ""  # denominator series for kind="gdp_contribution"/"potential_gdp"/"ratio"
     forecast: bool = False  # overlay a linear-regression forecast (Level view only)
     forecast_lookback: int = 4  # number of trailing actual periods to fit the forecast line to
     forecast_horizon: int = 2  # number of future periods to forecast
+    show_average: bool = False  # overlay a flat full-history-average reference line (Level view only)
+    percent_labels: tuple[str, ...] = ()  # series labels to legend-format as % when a chart mixes units
 
 
 @dataclass
@@ -298,31 +300,74 @@ SECTIONS: list[Section] = [
             ChartSpec(
                 id="corp_profits",
                 title="Corporate Profits After Tax",
-                why="Bottom-line health of the corporate sector.",
+                why=(
+                    "Bottom-line health of the corporate sector, with a dashed line marking the "
+                    "full-history average — shows whether current profits are running above or "
+                    "below their long-run norm."
+                ),
                 series={"Corporate Profits After Tax": "CP"},
                 unit="$ billions",
                 roc_eligible=True,
+                show_average=True,
+            ),
+            ChartSpec(
+                id="corp_profits_gdp_share",
+                title="Corporate Profits as % of GDP",
+                why=(
+                    "Companion to the chart above — separates \"profits growing because the "
+                    "economy is growing\" from \"profits growing faster than the economy\" "
+                    "(rising profit share / margin expansion). Nominal profits over nominal GDP, "
+                    "so the ratio isn't distorted by differing real/nominal deflators."
+                ),
+                kind="ratio",
+                series={"Corporate Profits (% of GDP)": "CP"},
+                gdp_series_id="GDP",
+                unit="%",
             ),
             ChartSpec(
                 id="industrial_production",
                 title="Industrial Production Index",
-                why="Real output of the business sector.",
-                series={"Industrial Production Index": "INDPRO"},
-                unit="Index (2017=100)",
+                why=(
+                    "Real output of the business sector, alongside Capacity Utilization — shows "
+                    "whether output is growing because of new capacity coming online or existing "
+                    "capacity running hotter."
+                ),
+                series={"Industrial Production Index": "INDPRO", "Capacity Utilization": "TCU"},
+                unit="Index (2017=100) / %",
                 roc_eligible=True,
-            ),
-            ChartSpec(
-                id="capacity_utilization",
-                title="Capacity Utilization",
-                why="Slack vs tightness in production.",
-                series={"Capacity Utilization": "TCU"},
-                unit="%",
+                percent_labels=("Capacity Utilization",),
             ),
             ChartSpec(
                 id="corp_bond_spread",
-                title="Corporate Bond Spread",
-                why="Market-based read on corporate stress / risk appetite.",
-                series={"Baa − 10Y Treasury Spread": "BAA10Y"},
+                title="Corporate Bond Spreads",
+                why=(
+                    "Market-based read on corporate stress / risk appetite across the credit "
+                    "spectrum — investment-grade (Baa) plus high-yield by rating (BB, B, CCC). "
+                    "CCC spreads can spike far wider than the others during stress (2008, 2020), "
+                    "which will dominate the scale in those periods — use the Timeframe control "
+                    "to zoom into calmer periods for a closer look at the tighter-spread lines."
+                ),
+                series={
+                    "Baa − 10Y Treasury": "BAA10Y",
+                    "BB High-Yield OAS": "BAMLH0A1HYBB",
+                    "B High-Yield OAS": "BAMLH0A2HYB",
+                    "CCC & Below OAS": "BAMLH0A3HYC",
+                },
+                unit="%",
+            ),
+            ChartSpec(
+                id="corporate_delinquencies",
+                title="Corporate Loan Delinquencies & Charge-Offs",
+                why=(
+                    "Business loan credit quality at all commercial banks — delinquency rate "
+                    "(30+ days past due) and charge-off rate (loans written off as uncollectible) "
+                    "show actual corporate credit stress, distinct from the market-priced bond "
+                    "spreads above."
+                ),
+                series={
+                    "Delinquency Rate": "DRBLACBS",
+                    "Charge-Off Rate": "CORBLACBS",
+                },
                 unit="%",
             ),
         ],

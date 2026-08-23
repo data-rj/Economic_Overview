@@ -54,19 +54,20 @@ TIMEFRAME_OPTIONS = ["1Y", "5Y", "10Y", "20Y", "Max"]
 _TIMEFRAME_YEARS = {"1Y": 1, "5Y": 5, "10Y": 10, "20Y": 20, "Max": None}
 
 
+def _format_value(val: float, is_percent: bool) -> str:
+    if is_percent:
+        return f"{val:.1f}%"
+    if abs(val) < 10:
+        return f"{val:,.2f}"
+    return f"{val:,.1f}"
+
+
 def _format_last_point(series: pd.Series, is_percent: bool) -> str:
     clean = series.dropna()
     if clean.empty:
         return ""
     period = clean.index[-1].strftime("%b-%y")
-    val = clean.iloc[-1]
-    if is_percent:
-        val_str = f"{val:.1f}%"
-    elif abs(val) < 10:
-        val_str = f"{val:,.2f}"
-    else:
-        val_str = f"{val:,.1f}"
-    return f"{period}: {val_str}"
+    return f"{period}: {_format_value(clean.iloc[-1], is_percent)}"
 
 
 def _legend_name(label: str, series: pd.Series, is_percent: bool) -> str:
@@ -123,8 +124,16 @@ def build_chart(
     forecast: bool = False,
     forecast_lookback: int = 4,
     forecast_horizon: int = 2,
+    show_average: bool = False,
+    percent_labels: tuple[str, ...] = (),
 ) -> go.Figure:
-    """series_map: legend label -> level Series (already fetched from FRED)."""
+    """series_map: legend label -> level Series (already fetched from FRED).
+
+    `percent_labels` overrides the unit-string percent detection on a per-series
+    basis, for charts that legitimately mix a percent series with a non-percent
+    one (e.g. Industrial Production Index + Capacity Utilization %) — without it,
+    every series in the chart would share one percent/non-percent legend format.
+    """
     fig = go.Figure()
     non_empty = {label: s for label, s in series_map.items() if not s.empty}
     if not non_empty:
@@ -137,6 +146,7 @@ def build_chart(
     y_title = unit
     for i, (label, s) in enumerate(non_empty.items()):
         color = CATEGORICAL[i % len(CATEGORICAL)]
+        is_pct_label = (label in percent_labels) if percent_labels else is_pct_unit
 
         if view == VIEW_YOY:
             plotted = transforms.yoy_pct_change(s)
@@ -165,7 +175,7 @@ def build_chart(
         plotted = s * scale
         if index_to_100:
             y_title = "Index (start = 100)"
-        name = _legend_name(label, plotted, is_percent=is_pct_unit and not index_to_100)
+        name = _legend_name(label, plotted, is_percent=is_pct_label and not index_to_100)
         visible = _clip(plotted, start_date)
         fig.add_trace(go.Scatter(x=visible.index, y=visible.values, name=name, line=dict(color=color, width=2)))
 
@@ -175,8 +185,17 @@ def build_chart(
                 connector = pd.concat([plotted.iloc[[-1]], fc])
                 fig.add_trace(go.Scatter(
                     x=connector.index, y=connector.values,
-                    name=_legend_name(f"{label} — Forecast", fc, is_percent=is_pct_unit and not index_to_100),
+                    name=_legend_name(f"{label} — Forecast", fc, is_percent=is_pct_label and not index_to_100),
                     line=dict(color=color, width=2, dash="dash"),
+                ))
+
+        if show_average:
+            avg_val = s.mean() * scale
+            if pd.notna(avg_val) and not visible.empty:
+                avg_label = f"{label} — Historical Avg: {_format_value(avg_val, is_pct_label and not index_to_100)}"
+                fig.add_trace(go.Scatter(
+                    x=[visible.index.min(), visible.index.max()], y=[avg_val, avg_val],
+                    name=avg_label, mode="lines", line=dict(color=MUTED, width=1.5, dash="dot"),
                 ))
 
     display_start = start_date if start_date is not None else min(s.index.min() for s in non_empty.values())

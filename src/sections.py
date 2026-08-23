@@ -29,6 +29,10 @@ def render_chart(spec: ChartSpec) -> None:
         render_share_chart(spec)
         return
 
+    if spec.kind == "ratio":
+        render_ratio_chart(spec)
+        return
+
     series_map = {label: fetch_series(series_id) for label, series_id in spec.series.items()}
     if all(s.empty for s in series_map.values()):
         details = "; ".join(
@@ -61,9 +65,42 @@ def render_chart(spec: ChartSpec) -> None:
     fig = charts.build_chart(
         series_map, view, unit=spec.unit, index_to_100=spec.index_to_100, timeframe=timeframe,
         forecast=spec.forecast, forecast_lookback=spec.forecast_lookback, forecast_horizon=spec.forecast_horizon,
+        show_average=spec.show_average, percent_labels=spec.percent_labels,
     )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
     st.caption(f"Source: FRED — {', '.join(spec.series.values())}")
+    st.divider()
+
+
+def render_ratio_chart(spec: ChartSpec) -> None:
+    label, numerator_id = next(iter(spec.series.items()))
+    numerator = fetch_series(numerator_id)
+    denominator = fetch_series(spec.gdp_series_id)
+
+    if numerator.empty or denominator.empty:
+        all_ids = [numerator_id, spec.gdp_series_id]
+        details = "; ".join(f"{series_id} — {fetch_series_error(series_id)}" for series_id in all_ids)
+        st.warning(f"No data returned. {details}")
+        st.divider()
+        return
+
+    num_aligned, den_aligned = numerator.align(denominator, join="inner")
+    ratio = (num_aligned / den_aligned * 100).dropna()
+    ratio.name = numerator_id
+
+    _, timeframe_col = st.columns([3, 1])
+    with timeframe_col:
+        timeframe = st.selectbox(
+            "Timeframe",
+            charts.TIMEFRAME_OPTIONS,
+            index=len(charts.TIMEFRAME_OPTIONS) - 1,
+            key=f"timeframe_{spec.id}",
+            label_visibility="collapsed",
+        )
+
+    fig = charts.build_chart({label: ratio}, charts.VIEW_LEVEL, unit=spec.unit, timeframe=timeframe)
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.caption(f"Source: FRED — {numerator_id}, {spec.gdp_series_id}")
     st.divider()
 
 

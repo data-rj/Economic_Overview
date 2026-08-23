@@ -66,14 +66,15 @@ GDP Price Deflator chart was removed (no longer needed).
 | Consumer Credit Outstanding | `TOTALSL` | 🔁 | Is rising debt service driven by debt stock growth or rates? |
 | Consumer Debt Delinquency Rates: Credit Cards, Consumer Loans, Mortgages | `DRCCLACBS`, `DRCLACBS`, `DRSFRMACBS` | | Actual default risk, distinct from payment-burden ratios above |
 
-## 4. Corporate America (4 charts)
+## 4. Corporate America (5 charts)
 
 | Chart | FRED series | RoC | Why |
 |---|---|---|---|
-| Corporate Profits After Tax | `CP` | 🔁 | Bottom-line health of the corporate sector |
-| Industrial Production Index | `INDPRO` | 🔁 | Real output of the business sector |
-| Capacity Utilization | `TCU` | | Slack vs tightness in production |
-| Corporate Bond Spread | `BAA10Y` | | Market-based read on corporate stress / risk appetite |
+| Corporate Profits After Tax, + historical average line | `CP` | 🔁 | Bottom-line health of the corporate sector vs. its long-run norm |
+| Corporate Profits as % of GDP | `CP`, `GDP` | | Profit growth vs. economy growth — rising share = margin expansion |
+| Industrial Production Index + Capacity Utilization | `INDPRO`, `TCU` | 🔁 (INDPRO only) | Output growth from new capacity vs. existing capacity running hotter |
+| Corporate Bond Spreads: Baa, BB, B, CCC & Below | `BAA10Y`, `BAMLH0A1HYBB`, `BAMLH0A2HYB`, `BAMLH0A3HYC` | | Risk appetite across the full credit spectrum |
+| Corporate Loan Delinquencies & Charge-Offs | `DRBLACBS`, `CORBLACBS` | | Actual bank-reported corporate credit stress |
 
 ## 5. Public & Private Investment (4 charts)
 
