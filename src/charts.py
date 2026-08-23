@@ -121,6 +121,8 @@ def build_chart(
     index_to_100: bool = False,
     timeframe: str = "Max",
     forecast: bool = False,
+    forecast_lookback: int = 4,
+    forecast_horizon: int = 2,
 ) -> go.Figure:
     """series_map: legend label -> level Series (already fetched from FRED)."""
     fig = go.Figure()
@@ -159,21 +161,21 @@ def build_chart(
             ))
             continue
 
-        plotted = s
-        if index_to_100 and len(s) > 0:
-            plotted = s / s.iloc[0] * 100
+        scale = (100 / s.iloc[0]) if (index_to_100 and len(s) > 0) else 1.0
+        plotted = s * scale
+        if index_to_100:
             y_title = "Index (start = 100)"
         name = _legend_name(label, plotted, is_percent=is_pct_unit and not index_to_100)
         visible = _clip(plotted, start_date)
         fig.add_trace(go.Scatter(x=visible.index, y=visible.values, name=name, line=dict(color=color, width=2)))
 
-        if forecast and not index_to_100:
-            fc = transforms.linear_forecast(s, lookback=4, horizon=2)
+        if forecast:
+            fc = transforms.linear_forecast(s, lookback=forecast_lookback, horizon=forecast_horizon) * scale
             if not fc.empty:
-                connector = pd.concat([s.iloc[[-1]], fc])
+                connector = pd.concat([plotted.iloc[[-1]], fc])
                 fig.add_trace(go.Scatter(
                     x=connector.index, y=connector.values,
-                    name=_legend_name(f"{label} — Forecast", fc, is_percent=is_pct_unit),
+                    name=_legend_name(f"{label} — Forecast", fc, is_percent=is_pct_unit and not index_to_100),
                     line=dict(color=color, width=2, dash="dash"),
                 ))
 
@@ -184,6 +186,44 @@ def build_chart(
         fig.add_hline(y=0, line_color=AXIS, line_width=1)
 
     return _apply_layout(fig, y_title)
+
+
+def build_share_chart(component_series: dict[str, pd.Series], timeframe: str = "Max") -> go.Figure:
+    """100%-stacked area chart: each component's share of the combined total over time.
+
+    Better than separate lines for a composition story (e.g. services' rising share of
+    spending) since the categories are wildly different in absolute dollar size but the
+    story is about the mix shifting, not the raw levels.
+    """
+    fig = go.Figure()
+    non_empty = {label: s.dropna() for label, s in component_series.items() if not s.empty}
+    if not non_empty:
+        return fig
+
+    df = pd.DataFrame(non_empty).dropna()
+    if df.empty:
+        return fig
+    total = df.sum(axis=1)
+    shares = df.div(total, axis=0) * 100
+
+    overall_end = shares.index.max()
+    start_date = _timeframe_start(overall_end, timeframe)
+
+    for i, label in enumerate(shares.columns):
+        color = CATEGORICAL[i % len(CATEGORICAL)]
+        series = shares[label]
+        visible = _clip(series, start_date)
+        fig.add_trace(go.Scatter(
+            x=visible.index, y=visible.values,
+            name=_legend_name(label, series, is_percent=True),
+            mode="lines", line=dict(width=1, color=SURFACE),
+            stackgroup="one", fillcolor=color,
+        ))
+
+    display_start = start_date if start_date is not None else shares.index.min()
+    _add_recession_bands(fig, display_start, overall_end)
+    fig.update_yaxes(range=[0, 100])
+    return _apply_layout(fig, "Share of total (%)")
 
 
 def build_contribution_chart(

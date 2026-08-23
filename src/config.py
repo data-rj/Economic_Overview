@@ -22,9 +22,11 @@ class ChartSpec:
     index_to_100: bool = False
     placeholder: bool = False
     placeholder_note: str = ""
-    kind: str = "line"  # "line", "gdp_contribution", or "potential_gdp"
+    kind: str = "line"  # "line", "share", "gdp_contribution", or "potential_gdp"
     gdp_series_id: str = ""  # denominator/reference GDP series for kind="gdp_contribution"/"potential_gdp"
-    forecast: bool = False  # overlay a 2-period linear-regression forecast (Level view only)
+    forecast: bool = False  # overlay a linear-regression forecast (Level view only)
+    forecast_lookback: int = 4  # number of trailing actual periods to fit the forecast line to
+    forecast_horizon: int = 2  # number of future periods to forecast
 
 
 @dataclass
@@ -181,18 +183,34 @@ SECTIONS: list[Section] = [
             ChartSpec(
                 id="pce_real",
                 title="Real Personal Consumption Expenditures",
-                why="Core consumer spending.",
-                series={"Real PCE": "PCEC96"},
-                unit="$ billions (2017 chained)",
+                why=(
+                    "Core consumer spending, alongside Personal Income and Personal Savings "
+                    "(dollar level, not the savings rate — see the Saving Rate chart below for "
+                    "that) — shows whether spending is being fueled by income growth or drawing "
+                    "down savings. Indexed to a common start since the three are on very "
+                    "different dollar scales. Dashed line is a 2-quarter forecast from a simple "
+                    "linear regression fit to the prior 12 months."
+                ),
+                series={"Real PCE": "PCEC96", "Personal Income": "PI", "Personal Savings": "PMSAVE"},
+                unit="Index (start = 100)",
                 roc_eligible=True,
+                index_to_100=True,
+                forecast=True,
+                forecast_lookback=12,
+                forecast_horizon=6,
             ),
             ChartSpec(
                 id="pce_by_category",
-                title="PCE by Category",
-                why="Where consumers are spending: durables, nondurables, services.",
+                title="PCE by Category — Share of Total",
+                why=(
+                    "Where consumers are spending, as a share of total PCE rather than raw "
+                    "dollars — durables, nondurables, and services are wildly different in "
+                    "absolute size, so a share-of-total view shows the composition story (e.g. "
+                    "services' rising share of spending) more clearly than three lines at "
+                    "different scales would."
+                ),
+                kind="share",
                 series={"Durable Goods": "PCEDG", "Nondurable Goods": "PCEND", "Services": "PCES"},
-                unit="$ billions (nominal)",
-                roc_eligible=True,
             ),
             ChartSpec(
                 id="disposable_income",
@@ -212,16 +230,62 @@ SECTIONS: list[Section] = [
             ChartSpec(
                 id="retail_sales",
                 title="Retail Sales",
-                why="Higher-frequency read on consumer activity.",
-                series={"Retail Sales": "RSAFS"},
-                unit="$ millions",
+                why=(
+                    "Higher-frequency read on consumer activity, alongside Retail Sales Ex Autos "
+                    "(strips out volatile auto sales) and PCE Services — retail sales alone "
+                    "misses most services spending (rent, healthcare, haircuts), so PCE Services "
+                    "fills that gap. Indexed to a common start since the three are on different "
+                    "dollar scales."
+                ),
+                series={
+                    "Retail Sales": "RSAFS",
+                    "Retail Sales Ex Autos": "RSFSXMV",
+                    "PCE Services": "PCES",
+                },
+                unit="Index (start = 100)",
                 roc_eligible=True,
+                index_to_100=True,
             ),
             ChartSpec(
                 id="household_debt_service",
                 title="Household Debt Service Ratio",
-                why="Leverage / consumer health angle.",
-                series={"Household Debt Service Ratio": "TDSP"},
+                why=(
+                    "Leverage / consumer health angle, decomposed into Mortgage and Consumer "
+                    "(non-mortgage) debt service — shows which type of debt is driving the "
+                    "overall trend."
+                ),
+                series={
+                    "Total": "TDSP",
+                    "Mortgage": "MDSP",
+                    "Consumer": "CDSP",
+                },
+                unit="%",
+            ),
+            ChartSpec(
+                id="consumer_credit",
+                title="Consumer Credit Outstanding",
+                why=(
+                    "Pairs with the Household Debt Service Ratio above — shows whether rising "
+                    "debt service burden is being driven by the debt stock growing or by rates/"
+                    "payments rising on existing debt."
+                ),
+                series={"Consumer Credit Outstanding": "TOTALSL"},
+                unit="$ billions",
+                roc_eligible=True,
+            ),
+            ChartSpec(
+                id="consumer_delinquencies",
+                title="Consumer Debt Delinquency Rates",
+                why=(
+                    "Share of loan balances 30+ days past due, by loan type — a direct read on "
+                    "household financial stress and actual default risk, distinct from the debt "
+                    "service ratio above (which measures payment burden, not delinquency)."
+                ),
+                series={
+                    "Credit Cards": "DRCCLACBS",
+                    "Consumer Loans (Broad)": "DRCLACBS",
+                    "Mortgages": "DRSFRMACBS",
+                },
                 unit="%",
             ),
         ],

@@ -53,17 +53,18 @@ GDP Price Deflator chart was removed (no longer needed).
 | JOLTS Openings & Quits | `JTSJOL`, `JTSQUR` | 🔁 (openings only) | Labor demand and worker confidence |
 | Labor Force Participation Rate by age (Overall, 16-24, 25-54, 55+) | `CIVPART`, `LNS11300012`, `LNS11300060`, `LNS11324230` | | Cyclical softness vs. structural/demographic shifts |
 
-## 3. Consumer (5 charts)
+## 3. Consumer (8 charts)
 
 | Chart | FRED series | RoC | Why |
 |---|---|---|---|
-| Real PCE, level + YoY | `PCEC96` | 🔁 | Core consumer spending, ~68% of GDP |
-| PCE by category: goods vs services, durables vs nondurables | `PCEDG`, `PCEND`, `PCES` | 🔁 | Where consumers are spending |
+| Real PCE + Personal Income + Personal Savings, indexed (+ 2Q forecast, 12mo regression) | `PCEC96`, `PI`, `PMSAVE` | 🔁 | Core consumer spending vs. the income/savings fueling it |
+| PCE by category — share of total (100% stacked area) | `PCEDG`, `PCEND`, `PCES` | | Composition of spending (e.g. services' rising share), not just raw dollars |
 | Real Disposable Personal Income | `DSPIC96` | 🔁 | Fuel for spending |
 | Personal Saving Rate | `PSAVERT` | | Cushion / spending sustainability |
-| Retail Sales | `RSAFS` | 🔁 | Higher-frequency read on consumer activity |
-
-*Optional extension: Household Debt Service Ratio (`TDSP`) for a leverage/health angle.*
+| Retail Sales + Retail Sales Ex Autos + PCE Services, indexed | `RSAFS`, `RSFSXMV`, `PCES` | 🔁 | Higher-frequency consumer activity; PCE Services fills the services-spending gap retail sales misses |
+| Household Debt Service Ratio: Total, Mortgage, Consumer | `TDSP`, `MDSP`, `CDSP` | | Leverage/health angle, by debt type |
+| Consumer Credit Outstanding | `TOTALSL` | 🔁 | Is rising debt service driven by debt stock growth or rates? |
+| Consumer Debt Delinquency Rates: Credit Cards, Consumer Loans, Mortgages | `DRCCLACBS`, `DRCLACBS`, `DRSFRMACBS` | | Actual default risk, distinct from payment-burden ratios above |
 
 ## 4. Corporate America (4 charts)
 
