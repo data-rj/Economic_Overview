@@ -70,6 +70,16 @@ def _fetch_series_raw(series_id: str, start: str = "1990-01-01") -> tuple[pd.Ser
     series = df.set_index("date")["value"].rename(series_id).dropna()
     if series.empty:
         return empty, "All observations were missing/non-numeric (FRED uses '.' for missing values)."
+
+    # FRED dates quarterly series at the quarter's start (e.g. 2024-01-01 for Q1) —
+    # shift to quarter-end instead, since a quarter's data isn't complete/reported
+    # until it ends. Detected as every observation falling on Jan/Apr/Jul/Oct 1st;
+    # monthly and weekly series never satisfy that for a full history, so this only
+    # fires for genuinely quarterly series.
+    is_quarterly = len(series) > 1 and (series.index.month.isin([1, 4, 7, 10]) & (series.index.day == 1)).all()
+    if is_quarterly:
+        series.index = series.index + pd.offsets.QuarterEnd(0)
+
     return series, ""
 
 

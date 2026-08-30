@@ -76,9 +76,15 @@ def linear_forecast(series: pd.Series, lookback: int = 4, horizon: int = 2) -> p
     future_vals = slope * future_x + intercept
 
     periods = infer_periods_per_year(clean)
-    step_months = 3 if periods == 4 else 1
     last_date = clean.index[-1]
-    future_dates = [last_date + pd.DateOffset(months=step_months * (i + 1)) for i in range(horizon)]
+    if periods == 4:
+        # Quarterly series are now quarter-end dated (see fred.py) — QuarterEnd
+        # offset arithmetic always lands on the correct quarter-end regardless of
+        # day-of-month, unlike DateOffset(months=3), which mangles e.g. Sep-30 +
+        # 3 months into Dec-30 instead of Dec-31.
+        future_dates = [last_date + pd.offsets.QuarterEnd(i + 1) for i in range(horizon)]
+    else:
+        future_dates = [last_date + pd.DateOffset(months=i + 1) for i in range(horizon)]
     return pd.Series(future_vals, index=pd.DatetimeIndex(future_dates), name=series.name)
 
 

@@ -215,7 +215,9 @@ def render_potential_gdp_chart(spec: ChartSpec) -> None:
     productivity = fetch_series(spec.series["Productivity"])
     labor_force_monthly = fetch_series(spec.series["Labor Force"])
     gdp_level = fetch_series(spec.gdp_series_id)
-    labor_force = labor_force_monthly.resample("QS").mean() if not labor_force_monthly.empty else labor_force_monthly
+    # "QE" (quarter-end) to match fetch_series's quarter-end dating of GDPC1/OPHNFB —
+    # otherwise this resample's quarter-start dates wouldn't align with them below.
+    labor_force = labor_force_monthly.resample("QE").mean() if not labor_force_monthly.empty else labor_force_monthly
 
     if gdp_level.empty or productivity.empty or labor_force.empty:
         all_ids = list(spec.series.values()) + [spec.gdp_series_id]
@@ -256,6 +258,13 @@ def render_gdp_contribution_chart(spec: ChartSpec) -> None:
     imports = series_map.pop("Imports", None)
     if exports is not None and imports is not None and not exports.empty and not imports.empty:
         series_map["Net Exports"] = exports.subtract(imports, fill_value=0)
+
+    # PCE (PCEC96) is monthly; the other components are quarterly and now
+    # quarter-end dated by fetch_series — resample PCE to match, or its
+    # month-start dates won't align with them in build_contribution_chart's
+    # date-based alignment against gdp_level.
+    if "PCE" in series_map and not series_map["PCE"].empty:
+        series_map["PCE"] = series_map["PCE"].resample("QE").mean()
 
     ordered_labels = ["PCE", "Investment", "Net Exports", "Government"]
     series_map = {label: series_map[label] for label in ordered_labels if label in series_map}
