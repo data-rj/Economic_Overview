@@ -107,3 +107,23 @@ def linear_forecast_yoy(series: pd.Series, lookback: int = 4, horizon: int = 2) 
         prior_val = clean.iloc[pos]
         yoy_vals.append((level / prior_val - 1) * 100)
     return pd.Series(yoy_vals, index=fc_levels.index, name=series.name)
+
+
+def derive_annualized_rate_forecast(level_series: pd.Series, lookback: int = 4, horizon: int = 2) -> pd.Series:
+    """Forecast a quarterly-annualized growth RATE by first forecasting the
+    underlying LEVEL series (linear_forecast) and then computing the annualized
+    rate implied by each forecasted level vs. the point before it (the last actual
+    level for the first forecast point, the prior forecast point after that).
+
+    Used so a rate chart's forecast (e.g. Real GDP Growth) stays internally
+    consistent with its companion level chart's forecast (Real GDP), rather than
+    being an independent linear regression fit directly to the published rate
+    series — which can imply a different trajectory than the level forecast does.
+    """
+    clean_level = level_series.dropna()
+    fc_level = linear_forecast(clean_level, lookback=lookback, horizon=horizon)
+    if fc_level.empty or clean_level.empty:
+        return fc_level
+
+    anchored = pd.concat([clean_level.iloc[[-1]], fc_level])
+    return annualized_pct_change(anchored).dropna()

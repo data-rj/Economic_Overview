@@ -70,13 +70,21 @@ def render_chart(spec: ChartSpec) -> None:
             label_visibility="collapsed",
         )
 
+    forecast_from_level = (
+        fetch_series(spec.forecast_from_level_series_id) if spec.forecast_from_level_series_id else None
+    )
+
     fig = charts.build_chart(
         series_map, view, unit=spec.unit, index_to_100=spec.index_to_100, timeframe=timeframe,
         forecast=spec.forecast, forecast_lookback=spec.forecast_lookback, forecast_horizon=spec.forecast_horizon,
         show_average=spec.show_average, percent_labels=spec.percent_labels,
+        forecast_from_level=forecast_from_level,
     )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-    st.caption(f"Source: FRED — {', '.join(spec.series.values())}")
+    source_ids = list(spec.series.values())
+    if spec.forecast_from_level_series_id:
+        source_ids.append(spec.forecast_from_level_series_id)
+    st.caption(f"Source: FRED — {', '.join(source_ids)}")
     st.divider()
 
 

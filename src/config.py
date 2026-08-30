@@ -31,6 +31,7 @@ class ChartSpec:
     percent_labels: tuple[str, ...] = ()  # series labels to legend-format as % when a chart mixes units
     rate_series: dict[str, str] = field(default_factory=dict)  # kind="inflation": already-a-rate companion series
     rate_series_view: str = "Monthly Annualized %"  # kind="inflation": the one view rate_series appears in
+    forecast_from_level_series_id: str = ""  # derive this chart's forecast from another (level) series instead
 
 
 @dataclass
@@ -64,11 +65,15 @@ SECTIONS: list[Section] = [
                 title="Real GDP Growth (Quarterly, Annualized)",
                 why=(
                     "The number everyone quotes each release. Dashed line is a 2-quarter forecast "
-                    "from a simple linear regression fit to the prior 4 quarters."
+                    "derived from the Real GDP level forecast above (the implied quarterly "
+                    "annualized rate between forecasted levels), rather than a separate "
+                    "regression fit directly to this rate series — keeps the two charts' "
+                    "forecasts consistent with each other."
                 ),
                 series={"Real GDP Growth (Annualized)": "A191RL1Q225SBEA"},
                 unit="%",
                 forecast=True,
+                forecast_from_level_series_id="GDPC1",
             ),
             ChartSpec(
                 id="gdp_contributions",

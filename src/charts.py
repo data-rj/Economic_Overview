@@ -131,8 +131,15 @@ def build_chart(
     forecast_horizon: int = 2,
     show_average: bool = False,
     percent_labels: tuple[str, ...] = (),
+    forecast_from_level: pd.Series | None = None,
 ) -> go.Figure:
     """series_map: legend label -> level Series (already fetched from FRED).
+
+    `forecast_from_level`, when given, derives the forecast from this LEVEL
+    series (via transforms.derive_annualized_rate_forecast) instead of running
+    linear_forecast directly on the chart's own series — for a rate chart whose
+    forecast should stay consistent with a companion level chart's forecast
+    (e.g. Real GDP Growth derived from the Real GDP level forecast).
 
     `percent_labels` overrides the unit-string percent detection on a per-series
     basis, for charts that legitimately mix a percent series with a non-percent
@@ -195,7 +202,12 @@ def build_chart(
         fig.add_trace(go.Scatter(x=visible.index, y=visible.values, name=name, line=dict(color=color, width=2)))
 
         if forecast:
-            fc = transforms.linear_forecast(s, lookback=forecast_lookback, horizon=forecast_horizon) * scale
+            if forecast_from_level is not None and not forecast_from_level.empty:
+                fc = transforms.derive_annualized_rate_forecast(
+                    forecast_from_level, lookback=forecast_lookback, horizon=forecast_horizon,
+                )
+            else:
+                fc = transforms.linear_forecast(s, lookback=forecast_lookback, horizon=forecast_horizon) * scale
             if not fc.empty:
                 connector = pd.concat([plotted.iloc[[-1]], fc])
                 fig.add_trace(go.Scatter(
