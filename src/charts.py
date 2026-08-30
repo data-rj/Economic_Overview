@@ -159,6 +159,16 @@ def build_chart(
             name = _legend_name(label, plotted, is_percent=True)
             visible = _clip(plotted, start_date)
             fig.add_trace(go.Scatter(x=visible.index, y=visible.values, name=name, line=dict(color=color, width=2)))
+
+            if forecast:
+                fc_yoy = transforms.linear_forecast_yoy(s, lookback=forecast_lookback, horizon=forecast_horizon)
+                if not fc_yoy.empty:
+                    connector = pd.concat([plotted.iloc[[-1]], fc_yoy])
+                    fig.add_trace(go.Scatter(
+                        x=connector.index, y=connector.values,
+                        name=_legend_name(f"{label} — Forecast", fc_yoy, is_percent=True),
+                        line=dict(color=color, width=2, dash="dash"),
+                    ))
             continue
 
         if view == VIEW_ROC:

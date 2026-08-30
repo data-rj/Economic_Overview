@@ -80,3 +80,24 @@ def linear_forecast(series: pd.Series, lookback: int = 4, horizon: int = 2) -> p
     last_date = clean.index[-1]
     future_dates = [last_date + pd.DateOffset(months=step_months * (i + 1)) for i in range(horizon)]
     return pd.Series(future_vals, index=pd.DatetimeIndex(future_dates), name=series.name)
+
+
+def linear_forecast_yoy(series: pd.Series, lookback: int = 4, horizon: int = 2) -> pd.Series:
+    """YoY % change of the linear_forecast level forecast, computed against the
+    actual value 12 months before each forecasted date — for a forecast horizon of
+    a year or less (as used throughout this dashboard), that prior value always
+    falls within known history rather than needing its own forecast. Monthly/
+    quarterly series only (consistent with linear_forecast's own scope).
+    """
+    clean = series.dropna()
+    fc_levels = linear_forecast(clean, lookback=lookback, horizon=horizon)
+    if fc_levels.empty:
+        return fc_levels
+
+    yoy_vals = []
+    for date, level in fc_levels.items():
+        prior_date = date - pd.DateOffset(months=12)
+        pos = clean.index.get_indexer([prior_date], method="nearest")[0]
+        prior_val = clean.iloc[pos]
+        yoy_vals.append((level / prior_val - 1) * 100)
+    return pd.Series(yoy_vals, index=fc_levels.index, name=series.name)
