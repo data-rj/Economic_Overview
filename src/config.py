@@ -216,8 +216,10 @@ SECTIONS: list[Section] = [
                     "(dollar level, not the savings rate — see the Saving Rate chart below for "
                     "that) — shows whether spending is being fueled by income growth or drawing "
                     "down savings. Indexed to a common start since the three are on very "
-                    "different dollar scales. Dashed line is a 2-quarter forecast from a simple "
-                    "linear regression fit to the prior 12 months."
+                    "different dollar scales. Dashed line is a 2-quarter forecast from a "
+                    "log-linear regression (fit to log-level, assumes constant % growth rather "
+                    "than constant $ growth — same fix as the Real GDP chart's forecast) fit to "
+                    "the prior 12 months."
                 ),
                 series={"Real PCE": "PCEC96", "Personal Income": "PI", "Personal Savings": "PMSAVE"},
                 unit="Index (start = 100)",
@@ -226,6 +228,7 @@ SECTIONS: list[Section] = [
                 forecast=True,
                 forecast_lookback=12,
                 forecast_horizon=6,
+                forecast_method="log_linear",
             ),
             ChartSpec(
                 id="pce_by_category",
