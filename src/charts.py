@@ -133,6 +133,7 @@ def build_chart(
     percent_labels: tuple[str, ...] = (),
     forecast_from_level: pd.Series | None = None,
     forecast_method: str = "linear",
+    show_legend: bool = True,
 ) -> go.Figure:
     """series_map: legend label -> level Series (already fetched from FRED).
 
@@ -243,7 +244,10 @@ def build_chart(
     if view == VIEW_ROC:
         fig.add_hline(y=0, line_color=AXIS, line_width=1)
 
-    return _apply_layout(fig, y_title)
+    fig = _apply_layout(fig, y_title)
+    if not show_legend:
+        fig.update_layout(showlegend=False)
+    return fig
 
 
 def build_share_chart(component_series: dict[str, pd.Series], timeframe: str = "Max") -> go.Figure:

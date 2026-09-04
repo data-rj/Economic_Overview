@@ -34,6 +34,7 @@ class ChartSpec:
     rate_series_view: str = "Monthly Annualized %"  # kind="inflation": the one view rate_series appears in
     forecast_from_level_series_id: str = ""  # derive this chart's forecast from another (level) series instead
     forecast_method: str = "linear"  # "linear" or "log_linear" (fits log-level, assumes constant % growth)
+    show_legend: bool = True  # set False to hide the in-chart Plotly legend (e.g. when it's redundant/wraps awkwardly)
 
 
 @dataclass
@@ -200,6 +201,7 @@ SECTIONS: list[Section] = [
                     "55+": "LNS11324230",
                 },
                 unit="%",
+                show_legend=False,
             ),
         ],
     ),
