@@ -88,15 +88,35 @@ def linear_forecast(series: pd.Series, lookback: int = 4, horizon: int = 2) -> p
     return pd.Series(future_vals, index=pd.DatetimeIndex(future_dates), name=series.name)
 
 
-def linear_forecast_yoy(series: pd.Series, lookback: int = 4, horizon: int = 2) -> pd.Series:
-    """YoY % change of the linear_forecast level forecast, computed against the
-    actual value 12 months before each forecasted date — for a forecast horizon of
-    a year or less (as used throughout this dashboard), that prior value always
-    falls within known history rather than needing its own forecast. Monthly/
-    quarterly series only (consistent with linear_forecast's own scope).
+def log_linear_forecast(series: pd.Series, lookback: int = 4, horizon: int = 2) -> pd.Series:
+    """Like linear_forecast, but fits the line to log(level) and exponentiates the
+    forecast back to level terms — assumes constant % growth (geometric/
+    exponential) rather than constant $ growth (arithmetic/linear) each period,
+    which matches how GDP and similar series actually grow. A plain linear fit to
+    the level systematically understates growth during expansions since it can't
+    capture compounding. Requires strictly positive values in the lookback window.
     """
     clean = series.dropna()
-    fc_levels = linear_forecast(clean, lookback=lookback, horizon=horizon)
+    if len(clean) < lookback or (clean.iloc[-lookback:] <= 0).any():
+        return pd.Series(dtype=float)
+
+    log_forecast = linear_forecast(np.log(clean), lookback=lookback, horizon=horizon)
+    if log_forecast.empty:
+        return log_forecast
+    return np.exp(log_forecast).rename(series.name)
+
+
+def linear_forecast_yoy(series: pd.Series, lookback: int = 4, horizon: int = 2, method: str = "linear") -> pd.Series:
+    """YoY % change of the level forecast (linear_forecast or log_linear_forecast,
+    per `method`), computed against the actual value 12 months before each
+    forecasted date — for a forecast horizon of a year or less (as used
+    throughout this dashboard), that prior value always falls within known
+    history rather than needing its own forecast. Monthly/quarterly series only
+    (consistent with linear_forecast's own scope).
+    """
+    clean = series.dropna()
+    forecast_fn = log_linear_forecast if method == "log_linear" else linear_forecast
+    fc_levels = forecast_fn(clean, lookback=lookback, horizon=horizon)
     if fc_levels.empty:
         return fc_levels
 
@@ -109,11 +129,14 @@ def linear_forecast_yoy(series: pd.Series, lookback: int = 4, horizon: int = 2) 
     return pd.Series(yoy_vals, index=fc_levels.index, name=series.name)
 
 
-def derive_annualized_rate_forecast(level_series: pd.Series, lookback: int = 4, horizon: int = 2) -> pd.Series:
+def derive_annualized_rate_forecast(
+    level_series: pd.Series, lookback: int = 4, horizon: int = 2, method: str = "linear",
+) -> pd.Series:
     """Forecast a quarterly-annualized growth RATE by first forecasting the
-    underlying LEVEL series (linear_forecast) and then computing the annualized
-    rate implied by each forecasted level vs. the point before it (the last actual
-    level for the first forecast point, the prior forecast point after that).
+    underlying LEVEL series (linear_forecast or log_linear_forecast, per `method`)
+    and then computing the annualized rate implied by each forecasted level vs.
+    the point before it (the last actual level for the first forecast point, the
+    prior forecast point after that).
 
     Used so a rate chart's forecast (e.g. Real GDP Growth) stays internally
     consistent with its companion level chart's forecast (Real GDP), rather than
@@ -121,7 +144,8 @@ def derive_annualized_rate_forecast(level_series: pd.Series, lookback: int = 4, 
     series — which can imply a different trajectory than the level forecast does.
     """
     clean_level = level_series.dropna()
-    fc_level = linear_forecast(clean_level, lookback=lookback, horizon=horizon)
+    forecast_fn = log_linear_forecast if method == "log_linear" else linear_forecast
+    fc_level = forecast_fn(clean_level, lookback=lookback, horizon=horizon)
     if fc_level.empty or clean_level.empty:
         return fc_level
 

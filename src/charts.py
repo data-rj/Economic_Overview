@@ -132,6 +132,7 @@ def build_chart(
     show_average: bool = False,
     percent_labels: tuple[str, ...] = (),
     forecast_from_level: pd.Series | None = None,
+    forecast_method: str = "linear",
 ) -> go.Figure:
     """series_map: legend label -> level Series (already fetched from FRED).
 
@@ -140,6 +141,11 @@ def build_chart(
     linear_forecast directly on the chart's own series — for a rate chart whose
     forecast should stay consistent with a companion level chart's forecast
     (e.g. Real GDP Growth derived from the Real GDP level forecast).
+
+    `forecast_method`: "linear" (default) fits the level directly; "log_linear"
+    fits log(level) and exponentiates back — assumes constant % growth rather
+    than constant $ growth per period, appropriate for exponentially-growing
+    series like GDP.
 
     `percent_labels` overrides the unit-string percent detection on a per-series
     basis, for charts that legitimately mix a percent series with a non-percent
@@ -168,7 +174,9 @@ def build_chart(
             fig.add_trace(go.Scatter(x=visible.index, y=visible.values, name=name, line=dict(color=color, width=2)))
 
             if forecast:
-                fc_yoy = transforms.linear_forecast_yoy(s, lookback=forecast_lookback, horizon=forecast_horizon)
+                fc_yoy = transforms.linear_forecast_yoy(
+                    s, lookback=forecast_lookback, horizon=forecast_horizon, method=forecast_method,
+                )
                 if not fc_yoy.empty:
                     connector = pd.concat([plotted.iloc[[-1]], fc_yoy])
                     fig.add_trace(go.Scatter(
@@ -205,9 +213,13 @@ def build_chart(
             if forecast_from_level is not None and not forecast_from_level.empty:
                 fc = transforms.derive_annualized_rate_forecast(
                     forecast_from_level, lookback=forecast_lookback, horizon=forecast_horizon,
+                    method=forecast_method,
                 )
             else:
-                fc = transforms.linear_forecast(s, lookback=forecast_lookback, horizon=forecast_horizon) * scale
+                forecast_fn = (
+                    transforms.log_linear_forecast if forecast_method == "log_linear" else transforms.linear_forecast
+                )
+                fc = forecast_fn(s, lookback=forecast_lookback, horizon=forecast_horizon) * scale
             if not fc.empty:
                 connector = pd.concat([plotted.iloc[[-1]], fc])
                 fig.add_trace(go.Scatter(

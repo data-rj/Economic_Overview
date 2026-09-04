@@ -78,7 +78,7 @@ def render_chart(spec: ChartSpec) -> None:
         series_map, view, unit=spec.unit, index_to_100=spec.index_to_100, timeframe=timeframe,
         forecast=spec.forecast, forecast_lookback=spec.forecast_lookback, forecast_horizon=spec.forecast_horizon,
         show_average=spec.show_average, percent_labels=spec.percent_labels,
-        forecast_from_level=forecast_from_level,
+        forecast_from_level=forecast_from_level, forecast_method=spec.forecast_method,
     )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
     source_ids = list(spec.series.values())

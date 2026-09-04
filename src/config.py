@@ -32,6 +32,7 @@ class ChartSpec:
     rate_series: dict[str, str] = field(default_factory=dict)  # kind="inflation": already-a-rate companion series
     rate_series_view: str = "Monthly Annualized %"  # kind="inflation": the one view rate_series appears in
     forecast_from_level_series_id: str = ""  # derive this chart's forecast from another (level) series instead
+    forecast_method: str = "linear"  # "linear" or "log_linear" (fits log-level, assumes constant % growth)
 
 
 @dataclass
@@ -53,12 +54,16 @@ SECTIONS: list[Section] = [
                 title="Real GDP",
                 why=(
                     "Headline size/trend of the economy. Dashed line is a 2-quarter forecast from "
-                    "a simple linear regression fit to the prior 4 quarters."
+                    "a log-linear regression (fit to log-level, assumes constant % growth rather "
+                    "than constant $ growth — a plain linear fit understates growth during "
+                    "expansions since it can't capture compounding) fit to the prior 8 quarters."
                 ),
                 series={"Real GDP": "GDPC1"},
                 unit="$ billions (2017 chained)",
                 roc_eligible=True,
                 forecast=True,
+                forecast_lookback=8,
+                forecast_method="log_linear",
             ),
             ChartSpec(
                 id="gdp_growth",
@@ -66,13 +71,15 @@ SECTIONS: list[Section] = [
                 why=(
                     "The number everyone quotes each release. Dashed line is a 2-quarter forecast "
                     "derived from the Real GDP level forecast above (the implied quarterly "
-                    "annualized rate between forecasted levels), rather than a separate "
-                    "regression fit directly to this rate series — keeps the two charts' "
-                    "forecasts consistent with each other."
+                    "annualized rate between forecasted levels, same log-linear method), rather "
+                    "than a separate regression fit directly to this rate series — keeps the two "
+                    "charts' forecasts consistent with each other."
                 ),
                 series={"Real GDP Growth (Annualized)": "A191RL1Q225SBEA"},
                 unit="%",
                 forecast=True,
+                forecast_lookback=8,
+                forecast_method="log_linear",
                 forecast_from_level_series_id="GDPC1",
             ),
             ChartSpec(
