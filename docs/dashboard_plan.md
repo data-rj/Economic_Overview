@@ -54,7 +54,8 @@ GDP Price Deflator chart was removed (no longer needed).
 | Chart | FRED series | RoC | Why |
 |---|---|---|---|
 | Unemployment Rate (U-3) + Underemployment Rate (U-6) | `UNRATE`, `U6RATE` | | Headline slack vs. total slack including marginally attached/part-time-for-economic-reasons workers |
-| Nonfarm Payrolls + Average Hourly Earnings, indexed | `PAYEMS`, `CES0500000003` | 🔁 | Job creation pace vs. wage growth pace |
+| Nonfarm Payrolls | `PAYEMS` | 🔁 | Job creation pace |
+| Average Hourly Earnings | `CES0500000003` | 🔁 | Wage growth pace — split from Payrolls into its own chart since indexing them together flattened one against the other (different long-run growth trajectories, and opposite short-run behavior during COVID) |
 | Initial Jobless Claims | `ICSA` | | Weekly leading indicator, moves before payrolls/UNRATE |
 | JOLTS Openings & Quits | `JTSJOL`, `JTSQUR` | 🔁 (openings only) | Labor demand and worker confidence |
 | Labor Force Participation Rate by age (Overall, 16-24, 25-54, 55+) | `CIVPART`, `LNS11300012`, `LNS11300060`, `LNS11324230` | | Cyclical softness vs. structural/demographic shifts |

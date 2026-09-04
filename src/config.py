@@ -154,15 +154,24 @@ SECTIONS: list[Section] = [
             ChartSpec(
                 id="payrolls",
                 title="Nonfarm Payrolls",
-                why=(
-                    "Job creation pace alongside Average Hourly Earnings — shows whether wage "
-                    "growth is keeping pace with (or outrunning) job growth. Indexed to a common "
-                    "start since payrolls (a level) and hourly earnings ($/hr) aren't the same unit."
-                ),
-                series={"Nonfarm Payrolls": "PAYEMS", "Average Hourly Earnings": "CES0500000003"},
-                unit="Index (start = 100)",
+                why="Job creation pace.",
+                series={"Nonfarm Payrolls": "PAYEMS"},
+                unit="thousands of jobs",
                 roc_eligible=True,
-                index_to_100=True,
+            ),
+            ChartSpec(
+                id="average_hourly_earnings",
+                title="Average Hourly Earnings",
+                why=(
+                    "Wage growth pace — companion to Nonfarm Payrolls above, split into its own "
+                    "chart since payrolls (a job count, no COVID-era crash) and hourly earnings "
+                    "($/hr, which briefly spiked in 2020 as lower-wage workers were laid off "
+                    "first, mechanically pulling the average up) don't share a comparable scale "
+                    "or trajectory — indexing them together flattened one against the other."
+                ),
+                series={"Average Hourly Earnings": "CES0500000003"},
+                unit="$/hour",
+                roc_eligible=True,
             ),
             ChartSpec(
                 id="jobless_claims",
