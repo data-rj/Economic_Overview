@@ -337,64 +337,6 @@ def build_contribution_chart(
     return _apply_layout(fig, "Percentage points (annualized)")
 
 
-def build_potential_gdp_chart(
-    actual_gdp: pd.Series,
-    productivity: pd.Series,
-    labor_force: pd.Series,
-    timeframe: str = "Max",
-) -> go.Figure:
-    """Potential GDP, estimated via the standard two-factor growth-accounting
-    identity: since GDP = Labor Productivity x Labor Input, g(GDP) ~= g(Productivity)
-    + g(Labor Input). Substituting an 8-quarter trailing-average ("trend") growth
-    rate for each factor in place of the noisy actual quarterly growth rate turns
-    this from an actual-GDP identity into a potential-GDP estimate — the same
-    simplified two-factor framework CBO and standard macro texts describe (capital
-    deepening and TFP are folded into the productivity trend here rather than
-    modeled separately). The result is compounded forward from a base level equal
-    to actual GDP at the first date the trend is computable, so it starts calibrated
-    to actual GDP and then diverges — the shaded band is the implied output gap.
-    """
-    fig = go.Figure()
-    if actual_gdp.empty or productivity.empty or labor_force.empty:
-        return fig
-
-    prod_trend = productivity.pct_change(1).rolling(8, min_periods=8).mean()
-    labor_trend = labor_force.pct_change(1).rolling(8, min_periods=8).mean()
-
-    combined = pd.DataFrame({"prod": prod_trend, "labor": labor_trend, "gdp": actual_gdp}).dropna()
-    if combined.empty:
-        return fig
-
-    potential_growth = combined["prod"] + combined["labor"]
-    growth_factors = 1 + potential_growth
-    cum = growth_factors.cumprod()
-    potential = combined["gdp"].iloc[0] * cum / cum.iloc[0]
-    potential.name = "Potential GDP"
-
-    overall_end = max(actual_gdp.index.max(), potential.index.max())
-    start_date = _timeframe_start(overall_end, timeframe)
-
-    potential_visible = _clip(potential, start_date)
-    actual_visible = _clip(actual_gdp, start_date)
-
-    fig.add_trace(go.Scatter(
-        x=potential_visible.index, y=potential_visible.values,
-        name=_legend_name("Potential GDP (est.)", potential, is_percent=False),
-        line=dict(color=CATEGORICAL[1], width=2, dash="dash"),
-    ))
-    fig.add_trace(go.Scatter(
-        x=actual_visible.index, y=actual_visible.values,
-        name=_legend_name("Real GDP (actual)", actual_gdp, is_percent=False),
-        line=dict(color=CATEGORICAL[0], width=2),
-        fill="tonexty", fillcolor="rgba(11, 11, 11, 0.05)",
-    ))
-
-    display_start = start_date if start_date is not None else min(actual_gdp.index.min(), potential.index.min())
-    _add_recession_bands(fig, display_start, overall_end)
-
-    return _apply_layout(fig, "$ billions (2017 chained)")
-
-
 def build_dual_axis_chart(
     primary: pd.Series,
     primary_label: str,

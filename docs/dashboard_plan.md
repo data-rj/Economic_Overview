@@ -32,14 +32,20 @@ bond yields/spreads, deficit or debt as % of GDP) — taking a rate-of-change
 of a rate is a second derivative that loses interpretability. These stay as
 level / YoY only.
 
-## 1. Macro Overview (4 charts)
+## 1. Macro Overview (6 charts)
 
 | Chart | FRED series | RoC | Why |
 |---|---|---|---|
-| Real GDP, level + YoY % (+ 2Q linear-regression forecast) | `GDPC1` | 🔁 | Headline size/trend of the economy |
-| Real GDP growth, quarterly annualized (+ 2Q linear-regression forecast) | `A191RL1Q225SBEA` | | The number everyone quotes each release |
+| Real GDP, level + YoY % (+ 2Q log-linear forecast, 8Q window) | `GDPC1` | 🔁 | Headline size/trend of the economy |
+| Real GDP growth, quarterly annualized (+ 2Q forecast derived from the Real GDP level forecast) | `A191RL1Q225SBEA` | | The number everyone quotes each release |
 | Contributions to GDP growth by component (stacked bar: PCE, Investment, Net Exports, Govt) — **implemented as an approximation**, computed dashboard-side from component levels (`PCEC96`, `GPDIC1`, `GCEC1`, `EXPGSC1`, `IMPGSC1`) relative to prior-quarter GDP, rather than BEA's own pre-built contribution series (IDs for those were never confirmed) | see above | | Shows what is driving growth, sets up the rest of the dashboard |
-| Potential GDP (estimated) vs actual, shaded output gap — two-factor growth-accounting estimate (trend productivity + trend labor force growth, compounded from an actual-GDP-calibrated base) | `OPHNFB`, `CLF16OV`, `GDPC1` | | The economy's sustainable output ceiling, standard CBO-style two-factor framework |
+| Output Gap (% of Potential GDP) | `GDPC1`, `GDPPOT` | | Above/below sustainable capacity — overheating vs. slack |
+| Real GDP: Actual vs. Potential (CBO), levels | `GDPC1`, `GDPPOT` | | The economy's sustainable output ceiling, in dollar terms |
+| Real GDP Growth: Actual vs. Potential (CBO), YoY | `GDPC1`, `GDPPOT` | | Same comparison in growth-rate terms |
+
+The three Potential GDP charts use CBO's official Real Potential GDP series
+(`GDPPOT`) directly, replacing an earlier dashboard-side two-factor
+growth-accounting estimate.
 
 GDP Price Deflator chart was removed (no longer needed).
 

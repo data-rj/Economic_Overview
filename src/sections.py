@@ -21,16 +21,16 @@ def render_chart(spec: ChartSpec) -> None:
         render_gdp_contribution_chart(spec)
         return
 
-    if spec.kind == "potential_gdp":
-        render_potential_gdp_chart(spec)
-        return
-
     if spec.kind == "share":
         render_share_chart(spec)
         return
 
     if spec.kind == "ratio":
         render_ratio_chart(spec)
+        return
+
+    if spec.kind == "yoy_pair":
+        render_yoy_pair_chart(spec)
         return
 
     if spec.kind == "deficit_debt":
@@ -101,7 +101,7 @@ def render_ratio_chart(spec: ChartSpec) -> None:
         return
 
     num_aligned, den_aligned = numerator.align(denominator, join="inner")
-    ratio = (num_aligned / den_aligned * 100).dropna()
+    ratio = (num_aligned / den_aligned * 100 - spec.ratio_offset).dropna()
     ratio.name = numerator_id
 
     _, timeframe_col = st.columns([3, 1])
@@ -219,20 +219,17 @@ def render_share_chart(spec: ChartSpec) -> None:
     st.divider()
 
 
-def render_potential_gdp_chart(spec: ChartSpec) -> None:
-    productivity = fetch_series(spec.series["Productivity"])
-    labor_force_monthly = fetch_series(spec.series["Labor Force"])
-    gdp_level = fetch_series(spec.gdp_series_id)
-    # "QE" (quarter-end) to match fetch_series's quarter-end dating of GDPC1/OPHNFB —
-    # otherwise this resample's quarter-start dates wouldn't align with them below.
-    labor_force = labor_force_monthly.resample("QE").mean() if not labor_force_monthly.empty else labor_force_monthly
-
-    if gdp_level.empty or productivity.empty or labor_force.empty:
-        all_ids = list(spec.series.values()) + [spec.gdp_series_id]
-        details = "; ".join(f"{series_id} — {fetch_series_error(series_id)}" for series_id in all_ids)
+def render_yoy_pair_chart(spec: ChartSpec) -> None:
+    series_map = {label: fetch_series(series_id) for label, series_id in spec.series.items()}
+    if all(s.empty for s in series_map.values()):
+        details = "; ".join(
+            f"{series_id} — {fetch_series_error(series_id)}" for series_id in spec.series.values()
+        )
         st.warning(f"No data returned. {details}")
         st.divider()
         return
+
+    yoy_map = {label: transforms.yoy_pct_change(s) for label, s in series_map.items() if not s.empty}
 
     _, timeframe_col = st.columns([3, 1])
     with timeframe_col:
@@ -244,10 +241,9 @@ def render_potential_gdp_chart(spec: ChartSpec) -> None:
             label_visibility="collapsed",
         )
 
-    fig = charts.build_potential_gdp_chart(gdp_level, productivity, labor_force, timeframe=timeframe)
+    fig = charts.build_chart(yoy_map, charts.VIEW_LEVEL, unit="YoY % change", timeframe=timeframe)
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
-    all_ids = list(spec.series.values()) + [spec.gdp_series_id]
-    st.caption(f"Source: FRED — {', '.join(all_ids)}")
+    st.caption(f"Source: FRED — {', '.join(spec.series.values())}")
     st.divider()
 
 

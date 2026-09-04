@@ -22,8 +22,9 @@ class ChartSpec:
     index_to_100: bool = False
     placeholder: bool = False
     placeholder_note: str = ""
-    kind: str = "line"  # "line", "share", "ratio", "gdp_contribution", "potential_gdp", "deficit_debt", "inflation"
-    gdp_series_id: str = ""  # denominator series for kind="gdp_contribution"/"potential_gdp"/"ratio"
+    kind: str = "line"  # "line", "share", "ratio", "yoy_pair", "gdp_contribution", "deficit_debt", "inflation"
+    gdp_series_id: str = ""  # denominator series for kind="gdp_contribution"/"ratio"
+    ratio_offset: float = 0.0  # kind="ratio": subtracted from the computed ratio (100 turns "% of X" into "% above/below X")
     forecast: bool = False  # overlay a linear-regression forecast (Level view only)
     forecast_lookback: int = 4  # number of trailing actual periods to fit the forecast line to
     forecast_horizon: int = 2  # number of future periods to forecast
@@ -103,22 +104,33 @@ SECTIONS: list[Section] = [
                 unit="Percentage points (annualized)",
             ),
             ChartSpec(
-                id="potential_gdp",
-                title="Potential GDP (Estimated)",
+                id="output_gap",
+                title="Output Gap (% of Potential GDP)",
                 why=(
-                    "The economy's sustainable output ceiling — actual GDP vs. an estimate of "
-                    "potential GDP, with the shaded band as the implied output gap. Estimated via "
-                    "the standard two-factor growth-accounting identity (GDP = Labor Productivity "
-                    "x Labor Input), using an 8-quarter trailing-average trend growth rate for "
-                    "productivity and the labor force in place of noisy actual growth — the same "
-                    "simplified two-factor framework CBO and standard macro texts use, not an "
-                    "exact match to CBO's own published estimate (which also models capital "
-                    "services, TFP, and NAIRU separately)."
+                    "Actual real GDP vs. CBO's official Real Potential GDP estimate, expressed as "
+                    "the % gap between them — positive means the economy is running above its "
+                    "sustainable capacity (overheating risk, inflationary pressure); negative "
+                    "means below it (slack, disinflationary/recessionary)."
                 ),
-                kind="potential_gdp",
-                series={"Productivity": "OPHNFB", "Labor Force": "CLF16OV"},
-                gdp_series_id="GDPC1",
+                kind="ratio",
+                series={"Output Gap": "GDPC1"},
+                gdp_series_id="GDPPOT",
+                ratio_offset=100.0,
+                unit="%",
+            ),
+            ChartSpec(
+                id="potential_gdp_levels",
+                title="Real GDP: Actual vs. Potential (CBO)",
+                why="The economy's sustainable output ceiling — actual real GDP against CBO's official Real Potential GDP estimate, in level terms.",
+                series={"Real GDP (Actual)": "GDPC1", "Real Potential GDP (CBO)": "GDPPOT"},
                 unit="$ billions (2017 chained)",
+            ),
+            ChartSpec(
+                id="potential_gdp_yoy",
+                title="Real GDP Growth: Actual vs. Potential (CBO), YoY",
+                why="Same comparison as above, in growth-rate terms — how actual growth compares to CBO's estimate of sustainable trend growth.",
+                kind="yoy_pair",
+                series={"Real GDP (Actual)": "GDPC1", "Real Potential GDP (CBO)": "GDPPOT"},
             ),
         ],
     ),
