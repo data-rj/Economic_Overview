@@ -107,16 +107,15 @@ SECTIONS: list[Section] = [
                 unit="%",
             ),
             ChartSpec(
-                id="potential_gdp_levels",
-                title="Real GDP: Actual vs. Potential (CBO)",
-                why="The economy's sustainable output ceiling — actual real GDP against CBO's official Real Potential GDP estimate, in level terms.",
-                series={"Real GDP (Actual)": "GDPC1", "Real Potential GDP (CBO)": "GDPPOT"},
-                unit="$ billions (2017 chained)",
-            ),
-            ChartSpec(
                 id="potential_gdp_yoy",
                 title="Real GDP Growth: Actual vs. Potential (CBO), YoY",
-                why="Same comparison as above, in growth-rate terms — how actual growth compares to CBO's estimate of sustainable trend growth.",
+                why=(
+                    "How actual growth compares to CBO's estimate of sustainable trend "
+                    "growth. CBO's Potential GDP series extends years beyond the latest "
+                    "actual GDP release (its own forward projection) — that portion is "
+                    "clipped so the chart doesn't show Potential running ahead into dates "
+                    "Actual GDP hasn't reached yet."
+                ),
                 kind="yoy_pair",
                 series={"Real GDP (Actual)": "GDPC1", "Real Potential GDP (CBO)": "GDPPOT"},
             ),

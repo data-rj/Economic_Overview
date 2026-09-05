@@ -234,7 +234,11 @@ def render_yoy_pair_chart(spec: ChartSpec) -> None:
         st.divider()
         return
 
-    yoy_map = {label: transforms.yoy_pct_change(s) for label, s in series_map.items() if not s.empty}
+    common_end = min(s.index.max() for s in series_map.values() if not s.empty)
+    yoy_map = {
+        label: transforms.yoy_pct_change(s).loc[:common_end]
+        for label, s in series_map.items() if not s.empty
+    }
 
     _, timeframe_col = st.columns([3, 1])
     with timeframe_col:
