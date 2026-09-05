@@ -32,16 +32,20 @@ bond yields/spreads, deficit or debt as % of GDP) — taking a rate-of-change
 of a rate is a second derivative that loses interpretability. These stay as
 level / YoY only.
 
-## 1. Macro Overview (6 charts)
+## 1. Macro Overview (5 charts)
 
 | Chart | FRED series | RoC | Why |
 |---|---|---|---|
-| Real GDP, level + YoY % (+ 2Q log-linear forecast, 8Q window) | `GDPC1` | 🔁 | Headline size/trend of the economy |
-| Real GDP growth, quarterly annualized (+ 2Q forecast derived from the Real GDP level forecast) | `A191RL1Q225SBEA` | | The number everyone quotes each release |
+| Real GDP Growth: YoY % and Quarterly Annualized, combined (+ 2Q forecast, log-linear, 8Q window) | `GDPC1`, `A191RL1Q225SBEA` | | Two standard ways to read GDP growth on one % scale — YoY (smoother) and BEA's quarterly annualized rate (the number everyone quotes) — both forecasts derived from the same log-linear regression on the GDP level so they stay consistent. No separate dollar-level chart (GDP's level doesn't share a scale with either growth measure), and no RoC view (RoC of a growth rate is a second derivative) |
 | Contributions to GDP growth by component (stacked bar: PCE, Investment, Net Exports, Govt) — **implemented as an approximation**, computed dashboard-side from component levels (`PCEC96`, `GPDIC1`, `GCEC1`, `EXPGSC1`, `IMPGSC1`) relative to prior-quarter GDP, rather than BEA's own pre-built contribution series (IDs for those were never confirmed) | see above | | Shows what is driving growth, sets up the rest of the dashboard |
 | Output Gap (% of Potential GDP) | `GDPC1`, `GDPPOT` | | Above/below sustainable capacity — overheating vs. slack |
 | Real GDP: Actual vs. Potential (CBO), levels | `GDPC1`, `GDPPOT` | | The economy's sustainable output ceiling, in dollar terms |
 | Real GDP Growth: Actual vs. Potential (CBO), YoY | `GDPC1`, `GDPPOT` | | Same comparison in growth-rate terms |
+
+Real GDP's separate level chart and quarterly-annualized growth chart were
+consolidated into one combined chart (above); as a result Real GDP no longer
+appears in the Business Cycle / RoC summary section (a 🔁 toggle on a chart
+that already only shows growth-rate views would be a second derivative).
 
 The three Potential GDP charts use CBO's official Real Potential GDP series
 (`GDPPOT`) directly, replacing an earlier dashboard-side two-factor
@@ -139,6 +143,12 @@ Each 🔁-flagged chart gets a view toggle: `Level | YoY % | RoC (3/12MMA)`.
 Default view stays on Level/YoY so the dashboard isn't overloaded on first
 load; RoC is opt-in per chart. Section 8 is the only place RoC is shown by
 default, since that's its dedicated home.
+
+## Timeframe default
+
+Every chart's Timeframe dropdown (`1Y | 5Y | 10Y | 20Y | Max`) defaults to
+**5Y** on first load, rather than Max — keeps the initial view focused on the
+recent cycle; users can widen it per chart as needed.
 
 ## AI-generated chart commentary (deferred)
 

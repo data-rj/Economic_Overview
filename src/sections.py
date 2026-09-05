@@ -41,6 +41,10 @@ def render_chart(spec: ChartSpec) -> None:
         render_inflation_chart(spec)
         return
 
+    if spec.kind == "gdp_growth_combined":
+        render_gdp_growth_chart(spec)
+        return
+
     series_map = {label: fetch_series(series_id) for label, series_id in spec.series.items()}
     if all(s.empty for s in series_map.values()):
         details = "; ".join(
@@ -65,7 +69,7 @@ def render_chart(spec: ChartSpec) -> None:
         timeframe = st.selectbox(
             "Timeframe",
             charts.TIMEFRAME_OPTIONS,
-            index=len(charts.TIMEFRAME_OPTIONS) - 1,
+            index=charts.TIMEFRAME_OPTIONS.index(charts.DEFAULT_TIMEFRAME),
             key=f"timeframe_{spec.id}",
             label_visibility="collapsed",
         )
@@ -110,7 +114,7 @@ def render_ratio_chart(spec: ChartSpec) -> None:
         timeframe = st.selectbox(
             "Timeframe",
             charts.TIMEFRAME_OPTIONS,
-            index=len(charts.TIMEFRAME_OPTIONS) - 1,
+            index=charts.TIMEFRAME_OPTIONS.index(charts.DEFAULT_TIMEFRAME),
             key=f"timeframe_{spec.id}",
             label_visibility="collapsed",
         )
@@ -142,7 +146,7 @@ def render_deficit_debt_chart(spec: ChartSpec) -> None:
         timeframe = st.selectbox(
             "Timeframe",
             charts.TIMEFRAME_OPTIONS,
-            index=len(charts.TIMEFRAME_OPTIONS) - 1,
+            index=charts.TIMEFRAME_OPTIONS.index(charts.DEFAULT_TIMEFRAME),
             key=f"timeframe_{spec.id}",
             label_visibility="collapsed",
         )
@@ -181,7 +185,7 @@ def render_inflation_chart(spec: ChartSpec) -> None:
         timeframe = st.selectbox(
             "Timeframe",
             charts.TIMEFRAME_OPTIONS,
-            index=len(charts.TIMEFRAME_OPTIONS) - 1,
+            index=charts.TIMEFRAME_OPTIONS.index(charts.DEFAULT_TIMEFRAME),
             key=f"timeframe_{spec.id}",
             label_visibility="collapsed",
         )
@@ -209,7 +213,7 @@ def render_share_chart(spec: ChartSpec) -> None:
         timeframe = st.selectbox(
             "Timeframe",
             charts.TIMEFRAME_OPTIONS,
-            index=len(charts.TIMEFRAME_OPTIONS) - 1,
+            index=charts.TIMEFRAME_OPTIONS.index(charts.DEFAULT_TIMEFRAME),
             key=f"timeframe_{spec.id}",
             label_visibility="collapsed",
         )
@@ -237,7 +241,7 @@ def render_yoy_pair_chart(spec: ChartSpec) -> None:
         timeframe = st.selectbox(
             "Timeframe",
             charts.TIMEFRAME_OPTIONS,
-            index=len(charts.TIMEFRAME_OPTIONS) - 1,
+            index=charts.TIMEFRAME_OPTIONS.index(charts.DEFAULT_TIMEFRAME),
             key=f"timeframe_{spec.id}",
             label_visibility="collapsed",
         )
@@ -245,6 +249,38 @@ def render_yoy_pair_chart(spec: ChartSpec) -> None:
     fig = charts.build_chart(yoy_map, charts.VIEW_LEVEL, unit="YoY % change", timeframe=timeframe)
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
     st.caption(f"Source: FRED — {', '.join(spec.series.values())}")
+    st.divider()
+
+
+def render_gdp_growth_chart(spec: ChartSpec) -> None:
+    level_label, level_id = next(iter(spec.series.items()))
+    rate_label, rate_id = next(iter(spec.rate_series.items()))
+    level = fetch_series(level_id)
+    rate = fetch_series(rate_id)
+
+    if level.empty or rate.empty:
+        details = "; ".join(f"{series_id} — {fetch_series_error(series_id)}" for series_id in [level_id, rate_id])
+        st.warning(f"No data returned. {details}")
+        st.divider()
+        return
+
+    _, timeframe_col = st.columns([3, 1])
+    with timeframe_col:
+        timeframe = st.selectbox(
+            "Timeframe",
+            charts.TIMEFRAME_OPTIONS,
+            index=charts.TIMEFRAME_OPTIONS.index(charts.DEFAULT_TIMEFRAME),
+            key=f"timeframe_{spec.id}",
+            label_visibility="collapsed",
+        )
+
+    fig = charts.build_gdp_growth_chart(
+        level, rate, level_label=level_label, rate_label=rate_label, timeframe=timeframe,
+        forecast_lookback=spec.forecast_lookback, forecast_horizon=spec.forecast_horizon,
+        forecast_method=spec.forecast_method,
+    )
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.caption(f"Source: FRED — {level_id}, {rate_id}")
     st.divider()
 
 
@@ -279,7 +315,7 @@ def render_gdp_contribution_chart(spec: ChartSpec) -> None:
         timeframe = st.selectbox(
             "Timeframe",
             charts.TIMEFRAME_OPTIONS,
-            index=len(charts.TIMEFRAME_OPTIONS) - 1,
+            index=charts.TIMEFRAME_OPTIONS.index(charts.DEFAULT_TIMEFRAME),
             key=f"timeframe_{spec.id}",
             label_visibility="collapsed",
         )
@@ -320,6 +356,6 @@ def render_business_cycle(all_sections: list[Section]) -> None:
         if s.empty:
             continue
         st.subheader(spec.title)
-        fig = charts.build_chart({label: s}, charts.VIEW_ROC, unit=spec.unit)
+        fig = charts.build_chart({label: s}, charts.VIEW_ROC, unit=spec.unit, timeframe=charts.DEFAULT_TIMEFRAME)
         st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
         st.divider()

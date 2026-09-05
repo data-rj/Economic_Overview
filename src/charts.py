@@ -56,6 +56,7 @@ VIEWS = [VIEW_LEVEL, VIEW_YOY, VIEW_ROC]
 INFLATION_VIEWS = [VIEW_LEVEL, VIEW_YOY, VIEW_MOM_SAAR]
 
 TIMEFRAME_OPTIONS = ["1Y", "5Y", "10Y", "20Y", "Max"]
+DEFAULT_TIMEFRAME = "5Y"
 _TIMEFRAME_YEARS = {"1Y": 1, "5Y": 5, "10Y": 10, "20Y": 20, "Max": None}
 
 
@@ -248,6 +249,75 @@ def build_chart(
     if not show_legend:
         fig.update_layout(showlegend=False)
     return fig
+
+
+def build_gdp_growth_chart(
+    level: pd.Series,
+    quarterly_rate: pd.Series,
+    level_label: str = "Real GDP YoY %",
+    rate_label: str = "Real GDP, Quarterly Annualized",
+    timeframe: str = "Max",
+    forecast_lookback: int = 8,
+    forecast_horizon: int = 2,
+    forecast_method: str = "log_linear",
+) -> go.Figure:
+    """Real GDP growth, shown two ways on one chart: YoY % change (derived from
+    the GDP level) and BEA's published quarterly-annualized rate — both are
+    growth-rate measures on a comparable % scale, unlike the GDP level itself,
+    which doesn't combine cleanly with either. Both series' forecasts are
+    derived from the same GDP level forecast (log-linear by default) so the two
+    lines' forward-looking segments stay consistent with each other.
+    """
+    fig = go.Figure()
+    if level.empty or quarterly_rate.empty:
+        return fig
+
+    yoy = transforms.yoy_pct_change(level).dropna()
+    yoy_fc = transforms.linear_forecast_yoy(
+        level, lookback=forecast_lookback, horizon=forecast_horizon, method=forecast_method,
+    )
+    rate_fc = transforms.derive_annualized_rate_forecast(
+        level, lookback=forecast_lookback, horizon=forecast_horizon, method=forecast_method,
+    )
+
+    overall_end = max(yoy.index.max(), quarterly_rate.index.max())
+    start_date = _timeframe_start(overall_end, timeframe)
+
+    yoy_color = CATEGORICAL[0]
+    yoy_visible = _clip(yoy, start_date)
+    fig.add_trace(go.Scatter(
+        x=yoy_visible.index, y=yoy_visible.values,
+        name=_legend_name(level_label, yoy, is_percent=True),
+        line=dict(color=yoy_color, width=2),
+    ))
+    if not yoy_fc.empty:
+        connector = pd.concat([yoy.iloc[[-1]], yoy_fc])
+        fig.add_trace(go.Scatter(
+            x=connector.index, y=connector.values,
+            name=_legend_name(f"{level_label} — Forecast", yoy_fc, is_percent=True),
+            line=dict(color=yoy_color, width=2, dash="dash"),
+        ))
+
+    rate_color = CATEGORICAL[1]
+    rate_visible = _clip(quarterly_rate, start_date)
+    fig.add_trace(go.Scatter(
+        x=rate_visible.index, y=rate_visible.values,
+        name=_legend_name(rate_label, quarterly_rate, is_percent=True),
+        line=dict(color=rate_color, width=2),
+    ))
+    if not rate_fc.empty:
+        connector = pd.concat([quarterly_rate.iloc[[-1]], rate_fc])
+        fig.add_trace(go.Scatter(
+            x=connector.index, y=connector.values,
+            name=_legend_name(f"{rate_label} — Forecast", rate_fc, is_percent=True),
+            line=dict(color=rate_color, width=2, dash="dash"),
+        ))
+
+    display_start = start_date if start_date is not None else min(yoy.index.min(), quarterly_rate.index.min())
+    _add_recession_bands(fig, display_start, overall_end)
+    fig.add_hline(y=0, line_color=AXIS, line_width=1)
+
+    return _apply_layout(fig, "% change")
 
 
 def build_share_chart(component_series: dict[str, pd.Series], timeframe: str = "Max") -> go.Figure:

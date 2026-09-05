@@ -22,7 +22,7 @@ class ChartSpec:
     index_to_100: bool = False
     placeholder: bool = False
     placeholder_note: str = ""
-    kind: str = "line"  # "line", "share", "ratio", "yoy_pair", "gdp_contribution", "deficit_debt", "inflation"
+    kind: str = "line"  # "line", "share", "ratio", "yoy_pair", "gdp_contribution", "deficit_debt", "inflation", "gdp_growth_combined"
     gdp_series_id: str = ""  # denominator series for kind="gdp_contribution"/"ratio"
     ratio_offset: float = 0.0  # kind="ratio": subtracted from the computed ratio (100 turns "% of X" into "% above/below X")
     forecast: bool = False  # overlay a linear-regression forecast (Level view only)
@@ -52,37 +52,24 @@ SECTIONS: list[Section] = [
         intro="The headline scoreboard: how big the economy is, how fast it's growing, and what's driving that growth.",
         charts=[
             ChartSpec(
-                id="gdp_real",
-                title="Real GDP",
+                id="gdp_growth_combined",
+                title="Real GDP Growth: YoY % and Quarterly Annualized",
                 why=(
-                    "Headline size/trend of the economy. Dashed line is a 2-quarter forecast from "
-                    "a log-linear regression (fit to log-level, assumes constant % growth rather "
-                    "than constant $ growth — a plain linear fit understates growth during "
-                    "expansions since it can't capture compounding) fit to the prior 8 quarters."
+                    "Two standard ways to read GDP growth on one comparable % scale: "
+                    "year-over-year change (smoother, less noisy) and the quarterly annualized "
+                    "rate BEA publishes each release (more volatile, but the number everyone "
+                    "quotes). No separate dollar-level chart — GDP's level doesn't share a scale "
+                    "with either growth measure. Dashed lines are a 2-quarter forecast, both "
+                    "derived from the same log-linear regression (assumes constant % growth "
+                    "rather than constant $ growth, since a plain linear fit understates growth "
+                    "during expansions) fit to the prior 8 quarters of the GDP level, so the two "
+                    "lines' forecasts stay consistent with each other."
                 ),
+                kind="gdp_growth_combined",
                 series={"Real GDP": "GDPC1"},
-                unit="$ billions (2017 chained)",
-                roc_eligible=True,
-                forecast=True,
+                rate_series={"Real GDP (Quarterly Annualized)": "A191RL1Q225SBEA"},
                 forecast_lookback=8,
                 forecast_method="log_linear",
-            ),
-            ChartSpec(
-                id="gdp_growth",
-                title="Real GDP Growth (Quarterly, Annualized)",
-                why=(
-                    "The number everyone quotes each release. Dashed line is a 2-quarter forecast "
-                    "derived from the Real GDP level forecast above (the implied quarterly "
-                    "annualized rate between forecasted levels, same log-linear method), rather "
-                    "than a separate regression fit directly to this rate series — keeps the two "
-                    "charts' forecasts consistent with each other."
-                ),
-                series={"Real GDP Growth (Annualized)": "A191RL1Q225SBEA"},
-                unit="%",
-                forecast=True,
-                forecast_lookback=8,
-                forecast_method="log_linear",
-                forecast_from_level_series_id="GDPC1",
             ),
             ChartSpec(
                 id="gdp_contributions",
